@@ -422,12 +422,28 @@ class Enemy {
         if (this.type === EnemyType.GOBLIN) {
             this.justThrew = false;
 
-            // Пока игрок не увидел гоблина на экране — гоблин идёт к нему и не стреляет.
-            // Как только попал в кадр — встаёт на позицию и дальше только стоит и стреляет.
+            // Гоблин-стрелок подходит к краю видимой области и там встаёт, чтобы стрелять.
+            // Закрепление обратимо: если игрок убежал и гоблин вышел из кадра — он снова
+            // идёт к экрану. Гистерезис: встаёт с отступом от края (margin), а снимается
+            // с позиции только полностью выйдя из кадра, чтобы не дёргаться на границе.
+            const view = this.scene.cameras.main.worldView;
+            const margin = 80;
+
+            if (this.goblinStationed) {
+                const stillVisible = s.x >= view.x && s.x <= view.right && s.y >= view.y && s.y <= view.bottom;
+                if (!stillVisible) {
+                    this.goblinStationed = false;
+                    this.goblinState = GoblinState.WALKING;
+                    this.goblinTimer = 0;
+                    s.angle = 0;
+                    s.setScale(this.baseScale, this.baseScale);
+                }
+            }
+
             if (!this.goblinStationed) {
-                const view = this.scene.cameras.main.worldView;
-                const onScreen = s.x >= view.x && s.x <= view.right && s.y >= view.y && s.y <= view.bottom;
-                if (onScreen) {
+                const inView = s.x >= view.x + margin && s.x <= view.right - margin &&
+                               s.y >= view.y + margin && s.y <= view.bottom - margin;
+                if (inView) {
                     this.goblinStationed = true;
                     this.goblinState = GoblinState.WALKING;
                     this.goblinTimer = 0;

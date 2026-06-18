@@ -97,7 +97,7 @@ const I18N = {
             'Increases pickup\nradius.',
             'Increases Max HP\nby 10.',
             'Enemies that hit you\ntake damage back.',
-            'Bullets pierce 1 enemy,\n+50% dmg to the next.',
+            'Bullets pierce 1 enemy,\n-50% dmg to the next.',
         ],
 
         // --- Бейдж легендарной карточки ---
@@ -129,7 +129,7 @@ const I18N = {
         node_descs: [
             ['Attack power +1', '+5% crit chance', 'Every 8th shot +1'],
             ['Max HP +10', 'Heal 10 HP over time', '-20% damage / lvl'],
-            ['Move speed +10', 'Unlock/upgrade dash', 'Pickup radius +100'],
+            ['Move speed +10', 'Unlock/upgrade dash', 'Pickup radius +50'],
         ],
 
         // --- Артефакты (названия/описания; стоимость — в constants.js) ---
@@ -245,7 +245,7 @@ const I18N = {
             'Повышает радиус\nподбора.',
             'Повышает макс. HP\nна 10.',
             'Враг получает урон,\nкогда бьёт вас.',
-            'Пуля пробивает врага,\n+50% урона следующему.',
+            'Пуля пробивает врага,\n-50% урона следующему.',
         ],
 
         // --- Бейдж легендарной карточки ---
@@ -277,7 +277,7 @@ const I18N = {
         node_descs: [
             ['Сила атаки +1', '+5% к шансу крита', 'Каждый 8-й выстрел +1'],
             ['Макс. HP +10', 'Лечит 10 HP со временем', '-20% урона / LVL'],
-            ['Скорость +10', 'Открыть/улучшить рывок', 'Радиус подбора +100'],
+            ['Скорость +10', 'Открыть/улучшить рывок', 'Радиус подбора +50'],
         ],
 
         // --- Артефакты ---

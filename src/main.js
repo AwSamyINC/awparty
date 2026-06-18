@@ -1,9 +1,18 @@
 // Точка входа: конфигурация Phaser и запуск сцены.
 
+// Лимит FPS из сейва, чтобы он действовал с самого первого кадра.
+// FPS_LIMITS: [30,60,120,240,0]; 0 = без лимита (совпадает с Phaser fps.limit).
+const savedFpsLimit = (() => {
+    try { return C.FPS_LIMITS[SaveSystem.load().currentFpsIndex] || 0; }
+    catch (e) { return 0; }
+})();
+
 const config = {
     type: Phaser.AUTO,
     parent: 'game',
     backgroundColor: '#0a0a0a',
+    // limit>0 — Phaser ограничивает частоту кадров (stepLimitFPS); 0 — без лимита.
+    fps: { limit: savedFpsLimit },
     scale: {
         // NONE + CSS-растяжение канваса на весь вьюпорт: внутреннее разрешение
         // остаётся 1920x1080 (UI не плывёт), но чёрных полос нет.
@@ -18,7 +27,7 @@ const config = {
     scene: [MainScene],
 };
 
-window.addEventListener('load', () => {
+const boot = () => {
     const start = () => {
         const game = new Phaser.Game(config);
         window.__gameRef = game;
@@ -45,4 +54,10 @@ window.addEventListener('load', () => {
     } else {
         start();
     }
-});
+};
+
+// Модули подключаются динамически (script.async=false), поэтому main.js может
+// выполниться уже ПОСЛЕ события 'load'. Если страница загружена — стартуем сразу,
+// иначе ждём 'load'.
+if (document.readyState === 'complete') boot();
+else window.addEventListener('load', boot);

@@ -37,6 +37,11 @@ class Player {
         this.ironSkinCharges = 0;
         this.soulLeechCritBonus = 0;
 
+        // Легендарные карты забега. Выставляются в resetGame / applyUpgrade,
+        // но инициализируем здесь, чтобы поля существовали с момента создания.
+        this.bladeMail = false; // шипы: враг при контакте получает ответный урон
+        this.pierce = false;    // прострел: пуля пробивает врага насквозь
+
         // Dash
         this.hasDashUnlocked = false;
         this.dashLevel = 0;
@@ -323,6 +328,7 @@ class Enemy {
         this.volleyTargetPos = { x: 0, y: 0 };
 
         this.hitFlashTimer = 0;
+        this.bladeMailCd = 0; // кулдаун ответного урона шипов (блейдмейл игрока)
 
         this.sprite = scene.addWorld(scene.add.sprite(x, y, texKey));
         this.sprite.setOrigin(0.5, 0.5);

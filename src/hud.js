@@ -11,7 +11,7 @@ class HUD {
         this.uiW = C.VIEW_WIDTH;
         this.uiH = C.VIEW_HEIGHT;
         this.objects = [];
-        this.skillCounts = [0, 0, 0, 0, 0];
+        this.skillCounts = [0, 0, 0, 0, 0, 0, 0]; // 7 внутризабеговых апгрейдов (вкл. 2 легендарных)
         this._lastBossExists = false;
         this._build();
         this.setVisible(false);
@@ -51,10 +51,11 @@ class HUD {
         this.bossBarWidth = bW;
 
         // --- SKILL CARDS (top-left) ---
-        const iconKeys = ['icon_fire', 'icon_dmg', 'icon_speed', 'icon_magnet', 'icon_hp'];
-        const cardColors = [0xff7800, 0xff3232, 0x00e6ff, 0xb400ff, 0x32ff64];
+        // 7 карт: 5 стакаемых апгрейдов + 2 легендарных (блейдмейл/прострел, золотая рамка).
+        const iconKeys = UPGRADE_ICONS; // ['icon_fire','icon_dmg','icon_speed','icon_magnet','icon_hp','icon_blademail','icon_pierce']
+        const cardColors = [0xff7800, 0xff3232, 0x00e6ff, 0xb400ff, 0x32ff64, 0xffd200, 0xffd200];
         this.skillCards = [];
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 7; i++) {
             const bg = add(this.scene.add.rectangle(0, 0, 64, 80, 0x0f001e, 210 / 255).setOrigin(0, 0).setStrokeStyle(2, cardColors[i]));
             const icon = add(this.scene.add.sprite(0, 0, iconKeys[i]).setOrigin(0.5, 0.5));
             const isc = 44 / Math.max(icon.width, icon.height);
@@ -120,7 +121,7 @@ class HUD {
         }
         // Карточки взятых скиллов (top-left): видны только при count > 0
         if (this.skillCards) {
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 7; i++) {
                 const show = this.skillCounts[i] > 0;
                 this.skillCards[i].bg.setVisible(show);
                 this.skillCards[i].icon.setVisible(show);
@@ -185,7 +186,7 @@ class HUD {
         // Skill cards
         const cardW2 = 64, gap2 = 10;
         let col = 0;
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 7; i++) {
             this.skillCounts[i] = runPickCounts[i];
             const card = this.skillCards[i];
             if (this.skillCounts[i] <= 0) {
@@ -196,10 +197,17 @@ class HUD {
             const cy = 100;
             card.bg.setPosition(cx, cy).setVisible(true);
             card.icon.setPosition(cx + cardW2 / 2, cy + 26).setVisible(true);
-            let stars = '';
-            const show = Math.min(this.skillCounts[i], 5);
-            for (let s = 0; s < show; s++) stars += '*';
-            if (this.skillCounts[i] > 5) stars += '+';
+            // Легендарные (блейдмейл/прострел) не стакаются — помечаем золотой звездой,
+            // обычные показывают число взятий звёздочками (5 макс, далее «+»).
+            let stars;
+            if (LEGENDARY_UPGRADE_IDS.includes(i)) {
+                stars = '★';
+            } else {
+                stars = '';
+                const show = Math.min(this.skillCounts[i], 5);
+                for (let s = 0; s < show; s++) stars += '*';
+                if (this.skillCounts[i] > 5) stars += '+';
+            }
             card.stars.setText(stars).setPosition(cx + cardW2 / 2, cy + 57).setVisible(true);
             col++;
         }

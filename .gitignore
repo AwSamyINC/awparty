@@ -6,6 +6,9 @@
 AwParty/
 
 # ОС / редакторы
+# .vscode: локальная конфигурация редактора (вкл. c_cpp_properties.json с
+# машинно-специфичным путём к SFML для референс-проекта AwParty/). В репозиторий не нужно.
+.vscode/
 Thumbs.db
 ehthumbs.db
 .DS_Store

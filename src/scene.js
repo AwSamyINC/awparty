@@ -247,7 +247,7 @@ class MainScene extends Phaser.Scene {
         p.currentSpeedMultiplier = 1.0; p.dashPenaltyTimer = 0;
         p.baseCritChance = 0.03 + s.permCritChance * 0.05;
         p.critChance = p.baseCritChance;
-        p.armor = s.permArmor;
+        p.armor = s.permArmor; p.damageAcc = 0;
         p.pickupRadius = ((s.permActiveArtifacts >> 6) & 1) ? 99999 : 50 + s.permMagnet * 50;
         p.ironSkinCharges = ((s.permActiveArtifacts >> 5) & 1) ? 3 : 0;
         p.soulLeechCritBonus = 0;

@@ -32,6 +32,7 @@ class Player {
         this.baseCritChance = 0.03;
         this.critMultiplier = 2.0;
         this.armor = 0;
+        this.damageAcc = 0; // накопитель дробного урона при процентном снижении бронёй
 
         this.ironSkinCharges = 0;
         this.soulLeechCritBonus = 0;
@@ -119,7 +120,12 @@ class Player {
     takeDamage(amount) {
         if (this.iFrames <= 0 && !this.isDashing && !this.isInvincible) {
             if (this.ironSkinCharges > 0) { this.ironSkinCharges--; this.iFrames = 0.3; return; }
-            this.hp -= Math.max(1, amount - this.armor); // минимум 1 урон: броня не обнуляет попадания
+            // Броня — процентное снижение урона (−20% за уровень). Дробный остаток копится,
+            // чтобы снижение работало против любого урона и никогда не давало бессмертия.
+            const reduction = Math.min(0.9, this.armor * 0.20);
+            this.damageAcc += amount * (1 - reduction);
+            const dealt = Math.floor(this.damageAcc);
+            if (dealt > 0) { this.hp -= dealt; this.damageAcc -= dealt; }
             this.iFrames = 1.0;
         }
     }

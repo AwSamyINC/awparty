@@ -1124,9 +1124,9 @@ class MainScene extends Phaser.Scene {
         this._mText(W / 2, 50, 'RECORDS', 100, '#ffd700', 0.5, 0, '#b40050', 5);
         // Заголовок режима + переключатель.
         const hc = this.lbView === 'hardcore';
-        this._mText(W / 2, 150, '<  ' + (hc ? 'HARDCORE' : 'NORMAL') + '  >', 44, hc ? '#ff5050' : '#00ffc8', 0.5, 0.5, '#000', 3);
+        this._mText(W / 2, 215, '<  ' + (hc ? 'HARDCORE' : 'NORMAL') + '  >', 44, hc ? '#ff5050' : '#00ffc8', 0.5, 0.5, '#000', 3);
         const board = this.leaderboards[this.lbView];
-        const rowY0 = 235, rowH = 54;
+        const rowY0 = 300, rowH = 54;
         const colX = [W * 0.10, W * 0.20, W * 0.58, W * 0.78];
         const hdrs = ['#', 'NAME', 'TIME', 'DATE'];
         for (let i = 0; i < 4; i++) this._mText(colX[i], rowY0 - 38, hdrs[i], 26, '#00ffc8', 0, 0);

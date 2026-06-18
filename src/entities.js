@@ -348,7 +348,7 @@ class Enemy {
     makeBoss() {
         this.isBoss = true;
         this.type = EnemyType.BOSS;
-        this.hp = 50; this.maxHp = 50; this.speed = 130; this.damage = 40;
+        this.hp = 50; this.maxHp = 50; this.speed = 130; this.damage = 50;
         this.sprite.setScale(this.baseScale * 3, this.baseScale * 3);
     }
 

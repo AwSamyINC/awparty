@@ -358,7 +358,7 @@ class Enemy {
     update(dt, px, py, arenaW, arenaH) {
         const s = this.sprite;
 
-        if (this.type !== EnemyType.BOSS) {
+        if (this.type !== EnemyType.BOSS && this.type !== EnemyType.GOBLIN) {
             const dir = normalize(px - s.x, py - s.y);
             s.x += dir.x * this.speed * dt;
             s.y += dir.y * this.speed * dt;
@@ -416,12 +416,10 @@ class Enemy {
             this.justThrew = false;
             this.goblinTimer += dt;
             if (this.goblinState === GoblinState.WALKING) {
-                const dir = normalize(px - s.x, py - s.y);
-                s.x += dir.x * this.speed * dt;
-                s.y += dir.y * this.speed * dt;
+                // Гоблин-стрелок не бегает: стоит на месте и ведёт прицельный огонь.
                 this.walkTimer += dt * 8;
-                s.angle = Math.sin(this.walkTimer) * 8;
-                if (this.goblinTimer >= 4.0) {
+                s.angle = Math.sin(this.walkTimer) * 4; // лёгкое покачивание на месте
+                if (this.goblinTimer >= 2.5) {
                     this.goblinState = GoblinState.PREPARING;
                     this.throwTargetPos = { x: px, y: py };
                     this.goblinTimer = 0;
@@ -644,7 +642,6 @@ class Gem {
     update(dt, px, py, pickupRadius) {
         this.animTimer += dt;
         const breath = 1 + Math.sin(this.animTimer * 3.2) * 0.18;
-        this.sprite.setScale(this.baseScale * breath, this.baseScale * breath);
 
         const spd = 2.8;
         const r = 128 + 127 * Math.sin(this.animTimer * spd + 0.0);
@@ -655,7 +652,11 @@ class Gem {
         this.sprite.angle += 55 * dt;
 
         const d = dist(this.sprite.x, this.sprite.y, px, py);
-        if (d < pickupRadius) {
+        const attracting = d < pickupRadius;
+        // В полёте к игроку (под действием магнита) опыт вдвое меньше; лёжа на полу — обычный размер.
+        const sizeMul = attracting ? 0.5 : 1;
+        this.sprite.setScale(this.baseScale * breath * sizeMul, this.baseScale * breath * sizeMul);
+        if (attracting) {
             const dir = normalize(px - this.sprite.x, py - this.sprite.y);
             this.sprite.x += dir.x * 500 * dt;
             this.sprite.y += dir.y * 500 * dt;

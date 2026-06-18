@@ -416,8 +416,9 @@ class MainScene extends Phaser.Scene {
         if (this.gamePhase === GamePhase.PHASE_2) {
             this.phase2Timer += dt;
             if (this.phase2Timer >= 60 && !this.phase2BossSpawned) {
-                const bx = clamp(px + 800, 0, C.ARENA_WIDTH);
-                const by = clamp(py, 0, C.ARENA_HEIGHT);
+                // Не у стены: гарантируем дистанцию от игрока, иначе босс появлялся внутри него.
+                const bp = findSpawnPos(px, py, C.ARENA_WIDTH, C.ARENA_HEIGHT, 800);
+                const bx = bp.x, by = bp.y;
                 const boss2 = new Enemy(this, bx, by, 'boss2');
                 boss2.makeBoss2('boss2');
                 if (s.isHardcoreMode) { boss2.speed *= 1.5; boss2.hp *= 2; boss2.maxHp *= 2; }
@@ -875,7 +876,9 @@ class MainScene extends Phaser.Scene {
 
     applyUpgrade(id) {
         const p = this.player;
-        if (id === 0 && p.shootCooldown > 0.15) p.shootCooldown -= 0.05;
+        // Скорострельность: множительная прибавка с затуханием и более высоким полом —
+        // стак только этой карты больше не делает забег слишком быстрым.
+        if (id === 0) p.shootCooldown = Math.max(0.22, p.shootCooldown * 0.93);
         else if (id === 1) p.attackDamage += 1;
         else if (id === 2 && p.speed < 400) p.speed += 20;
         else if (id === 3 && p.pickupRadius < 600) p.pickupRadius += 50;

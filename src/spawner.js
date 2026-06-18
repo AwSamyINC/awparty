@@ -18,10 +18,19 @@ function findSpawnPos(px, py, arenaW, arenaH, safeRadius) {
         const ty = randInt(Math.floor(arenaH));
         if (distSq(px, py, tx, ty) >= safeRadius * safeRadius) return { x: tx, y: ty };
     }
-    const ang = randInt(360) * Math.PI / 180;
-    const gx = clamp(px + Math.cos(ang) * safeRadius, 0, arenaW);
-    const gy = clamp(py + Math.sin(ang) * safeRadius, 0, arenaH);
-    return { x: gx, y: gy };
+    // Фолбэк у стены: перебираем направления по кольцу и берём первое, что после клэмпа
+    // в арену остаётся достаточно далеко от игрока (иначе враг появлялся внутри игрока).
+    let best = null, bestD = -1;
+    const start = randInt(360);
+    for (let i = 0; i < 36; i++) {
+        const ang = (start + i * 10) * Math.PI / 180;
+        const gx = clamp(px + Math.cos(ang) * safeRadius, 0, arenaW);
+        const gy = clamp(py + Math.sin(ang) * safeRadius, 0, arenaH);
+        const d = distSq(px, py, gx, gy);
+        if (d >= safeRadius * safeRadius) return { x: gx, y: gy };
+        if (d > bestD) { bestD = d; best = { x: gx, y: gy }; }
+    }
+    return best;
 }
 
 class EnemySpawner {
@@ -95,14 +104,9 @@ class EnemySpawner {
                 this.goblinSpawnTimer = 0;
             }
             if (survivalTime >= 60 && !this.bossSpawned) {
-                const bossOffset = 800;
-                let bx = clamp(px + bossOffset, 0, arenaW);
-                let by = clamp(py, 0, arenaH);
-                if (distSq(px, py, bx, by) < 40000) {
-                    const ang = randInt(360) * Math.PI / 180;
-                    bx = clamp(px + Math.cos(ang) * bossOffset, 0, arenaW);
-                    by = clamp(py + Math.sin(ang) * bossOffset, 0, arenaH);
-                }
+                // Гарантируем дистанцию от игрока даже у стены (иначе босс появлялся внутри него).
+                const bp = findSpawnPos(px, py, arenaW, arenaH, 800);
+                const bx = bp.x, by = bp.y;
                 const boss = new Enemy(scene, bx, by, enemyKey);
                 boss.makeBoss();
                 if (isHardcore) { boss.speed *= 1.5; boss.hp *= SPAWN_HARDCORE_HP; boss.maxHp *= SPAWN_HARDCORE_HP; }

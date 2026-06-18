@@ -116,6 +116,7 @@ class MainScene extends Phaser.Scene {
         this.leaderboardNewEntryIndex = -1;
         this.nameInput = ''; // ввод ника на экране NAME_INPUT
         this._pendingHighlight = null; // имя игрока, чью строку подсветить после отправки
+        this._nameError = '';          // сообщение об ошибке на экране ввода ника
         this.levelUpIds = [0, 1, 2];
         this.cheatBuffer = '';
         this.cheatMessage = '';
@@ -645,6 +646,7 @@ class MainScene extends Phaser.Scene {
             } else {
                 // Первый раз — просим ввести ник.
                 this.nameInput = '';
+                this._nameError = '';
                 this.setState(GameState.NAME_INPUT);
             }
         } else {
@@ -669,7 +671,21 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    _confirmNameInput() { this._submitScore(this.nameInput, true); }
+    _confirmNameInput() {
+        const typed = this.nameInput.trim();
+        if (!typed) { this._nameError = 'Enter a name'; this.rebuildMenu(); return; }
+        // Ник должен быть свободен (одна запись на игрока).
+        RemoteLeaderboard.nameTaken(typed, (taken) => {
+            // null = оффлайн/без конфига: проверяем по локальной таблице.
+            const isTaken = (taken === null) ? this.leaderboard.some(e => e.name === typed) : taken;
+            if (isTaken) {
+                this._nameError = 'Name is taken';
+                if (this.currentState === GameState.NAME_INPUT) this.rebuildMenu();
+                return;
+            }
+            this._submitScore(typed, true);
+        });
+    }
 
     // Сепарация врагов через сетку (Game::update)
     separateEnemies(px, py) {
@@ -1118,9 +1134,11 @@ class MainScene extends Phaser.Scene {
 
         // Поле ввода + текст с курсором-подчёркиванием.
         const boxW = 760, boxH = 96, boxY = H * 0.58;
-        this._mAdd(this.add.rectangle(W / 2, boxY, boxW, boxH, 0x140028, 1).setOrigin(0.5, 0.5).setStrokeStyle(3, 0x9600ff));
+        const errored = !!this._nameError;
+        this._mAdd(this.add.rectangle(W / 2, boxY, boxW, boxH, 0x140028, 1).setOrigin(0.5, 0.5).setStrokeStyle(3, errored ? 0xff3264 : 0x9600ff));
         this._mText(W / 2, boxY, this.nameInput + '_', 50, '#ffffff', 0.5, 0.5, '#000', 2);
 
+        if (errored) this._mText(W / 2, H * 0.66, this._nameError, 34, '#ff5078', 0.5, 0.5, '#000', 2);
         this._mText(W / 2, H * 0.74, 'ENTER  -  Confirm        BACKSPACE  -  Erase', 30, '#7d78a0', 0.5, 0.5, '#000', 2);
     }
 
@@ -1386,11 +1404,11 @@ class MainScene extends Phaser.Scene {
         } else if (st === GameState.LEADERBOARD) {
             if (esc || code === 'Enter') this.setState(this.leaderboardFromMenu ? GameState.MENU : GameState.LOBBY);
         } else if (st === GameState.NAME_INPUT) {
-            if (code === 'Backspace') { this.nameInput = this.nameInput.slice(0, -1); this.rebuildMenu(); if (e.preventDefault) e.preventDefault(); }
+            if (code === 'Backspace') { this.nameInput = this.nameInput.slice(0, -1); this._nameError = ''; this.rebuildMenu(); if (e.preventDefault) e.preventDefault(); }
             else if (code === 'Enter' || code === 'Escape') { this._confirmNameInput(); }
             else if (e.key && e.key.length === 1) {
                 const cc = e.key.charCodeAt(0);
-                if (cc >= 32 && cc <= 126 && this.nameInput.length < 20) { this.nameInput += e.key; this.rebuildMenu(); }
+                if (cc >= 32 && cc <= 126 && this.nameInput.length < 20) { this.nameInput += e.key; this._nameError = ''; this.rebuildMenu(); }
             }
         } else if (st === GameState.PLAYING) {
             if (this.isGameOver) {

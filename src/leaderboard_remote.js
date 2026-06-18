@@ -34,6 +34,17 @@ const RemoteLeaderboard = {
             .catch(() => cb(null));
     },
 
+    // Занят ли ник. cb(true|false|null) — null при ошибке/оффлайне/без конфига.
+    nameTaken(name, cb) {
+        if (!this.configured()) { cb(null); return; }
+        const url = SUPABASE_URL + '/rest/v1/leaderboard'
+            + '?select=name&name=eq.' + encodeURIComponent(name) + '&limit=1';
+        fetch(url, { headers: this._headers() })
+            .then(r => r.ok ? r.json() : Promise.reject(r.status))
+            .then(rows => cb(rows.length > 0))
+            .catch(() => cb(null));
+    },
+
     // Отправить результат через RPC submit_score: одна запись на игрока, хранит лучшее время.
     submit(name, time, cb) {
         if (!this.configured()) { if (cb) cb(false); return; }

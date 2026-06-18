@@ -369,7 +369,7 @@ class Enemy {
                 this.walkTimer += dt * 10;
                 s.angle = Math.sin(this.walkTimer) * 15;
             }
-        } else {
+        } else if (this.type === EnemyType.BOSS) {
             this.justFiredVolley = false;
             const enraged = this.isBoss2 && (this.hp <= this.maxHp / 2);
             const walkDuration = enraged ? 2.5 : 4.0;

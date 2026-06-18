@@ -769,7 +769,8 @@ class MainScene extends Phaser.Scene {
         for (const e of this.enemies) {
             if (e.hp > 0) continue;
             if ((s.permActiveArtifacts >> 3) & 1) {
-                const cap = p.baseCritChance * 10;
+                // Жёсткий потолок 75%: крит остаётся шансом, а не гарантией каждый выстрел.
+                const cap = Math.min(0.75, p.baseCritChance * 10);
                 p.critChance = Math.min(cap, p.critChance + 0.005);
             }
             const ex = e.sprite.x, ey = e.sprite.y;

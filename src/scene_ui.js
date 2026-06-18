@@ -530,10 +530,10 @@ MainScene.prototype.onKeyDown = function(e) {
             if ((left || right) && this.selectedSettingIndex === 5) { this._toggleLanguage(); }
             if (enter) this._settingsActivate();
             if (esc) { this.saveGame(); this.setState(GameState.MENU); }
-            // Чит-код 'givecoin'
+            // Чит-код 'givecoinz'
             if (e.key && e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
                 this.cheatBuffer = (this.cheatBuffer + e.key.toLowerCase()).slice(-32);
-                if (this.cheatBuffer.indexOf('givecoin') !== -1) {
+                if (this.cheatBuffer.indexOf('givecoinz') !== -1) {
                     this.save.totalCoins += 500; this.cheatMessage = t('cheat_gave'); this.cheatMessageTimer = 3;
                     this.saveGame(); this.cheatBuffer = ''; this.rebuildMenu();
                 }

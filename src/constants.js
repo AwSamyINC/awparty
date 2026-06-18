@@ -69,8 +69,8 @@ const GoblinState = { WALKING: 0, PREPARING: 1, THROWING: 2, RECOVERING: 3 };
 const UPGRADE_ICONS = ['icon_fire', 'icon_dmg', 'icon_speed', 'icon_magnet', 'icon_hp'];
 
 // Ability data (AbilitySelectUI.cpp). Названия — в i18n.js: ability_names.
-const ABILITY_COOLDOWNS = { 0: 25, 1: 15, 2: 12 };
-const ABILITY_ICONS = { '-10': 'ability_dash', 0: 'ability_invincible', 1: 'ability_slam', 2: 'ability_disc' };
+const ABILITY_COOLDOWNS = { 0: 25, 1: 15, 2: 12, 3: 14 };
+const ABILITY_ICONS = { '-10': 'ability_dash', 0: 'ability_invincible', 1: 'ability_slam', 2: 'ability_disc', 3: 'ability_laser' };
 
 // Artifact info (ShopUI.cpp)
 const ARTIFACTS = [
@@ -98,6 +98,8 @@ const TEXTURE_MANIFEST = [
     ['enemyV', 'enemyV.png'],
     ['weaponEnemyV', 'WeaponEnemyV.png'],
     ['boss2', 'boss2.png'],
+    ['boss3', 'boss3.png'],
+    ['ability_laser', 'laser.png'],
     ['gem', 'gem.png'],
     ['boss_soul', 'boss_soul.png'],
     ['ability_dash', 'dash.png'],

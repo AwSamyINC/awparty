@@ -138,6 +138,7 @@ class HUD {
             case 0: return 0xffd700;
             case 1: return 0xff5000;
             case 2: return 0xb400ff;
+            case 3: return 0x00e6ff;
             default: return 0x3c374b;
         }
     }
@@ -147,6 +148,7 @@ class HUD {
             case 0: return 'ability_invincible';
             case 1: return 'ability_slam';
             case 2: return 'ability_disc';
+            case 3: return 'ability_laser';
             default: return null;
         }
     }

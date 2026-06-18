@@ -297,6 +297,22 @@ class Enemy {
         this.jumpDir = { x: 0, y: 0 };
         this.isBoss = false;
         this.isBoss2 = false;
+        this.isBoss3 = false;
+
+        // STROBE (босс 3 этапа) — собственный конечный автомат и параметры атак
+        this.strobeState = 'ROAM';   // ROAM | TELEGRAPH | EXECUTE | RECOVER
+        this.strobeTimer = 0;
+        this.strobeAttack = -1;      // 0=laser sweep, 1=strobe burst, 2=blackout
+        this.beamActive = false;     // луч активен (наносит урон, рисуется сценой)
+        this.beamTelegraph = false;  // фаза прицеливания лучом
+        this.beamAngle = 0;          // текущий угол луча
+        this.beamLen = 2400;
+        this.beamWidth = 80;
+        this.beamStart = 0;
+        this.beamSweep = Math.PI;
+        this.burstCount = 0;
+        this.burstTimer = 0;
+        this._teleported = false;
 
         this.goblinState = GoblinState.WALKING;
         this.goblinTimer = 0;
@@ -362,6 +378,139 @@ class Enemy {
         this.sprite.setScale(this.baseScale * 3.5, this.baseScale * 3.5);
     }
 
+    // STROBE — босс 3 этапа (лазерный VJ). Текстура-плейсхолдер (boss2), тонируется
+    // в неон сценой; можно заменить на отдельный спрайт позже.
+    makeBoss3(texKey) {
+        this.isBoss = true; this.isBoss3 = true;
+        this.type = EnemyType.BOSS;
+        this.sprite.setTexture(texKey);
+        this.sprite.setOrigin(0.5, 0.5);
+        this.baseScale = 90 / this.sprite.width;
+        this.hp = 180; this.maxHp = 180; this.speed = 140; this.damage = 40;
+        this.sprite.setScale(this.baseScale * 3.2, this.baseScale * 3.2);
+        this.strobeState = 'ROAM';
+        this.strobeTimer = 0;
+        this.strobeAttack = -1;
+    }
+
+    // Конечный автомат STROBE: ROAM -> TELEGRAPH -> EXECUTE -> RECOVER, по кругу.
+    // Атаки чередуются: 0 = вращающийся лазер, 1 = стробо-веер, 2 = затемнение+телепорт.
+    // В ярости (HP<=50%) все фазы быстрее, веер даёт лишнее кольцо.
+    _updateStrobe(dt, px, py) {
+        const s = this.sprite;
+        this.justFiredVolley = false;
+        this.justThrew = false;
+        const enraged = this.hp <= this.maxHp / 2;
+        const tf = enraged ? 0.7 : 1.0; // ускорение таймеров в ярости
+
+        if (this.strobeState === 'ROAM') {
+            const dir = normalize(px - s.x, py - s.y);
+            s.x += dir.x * this.speed * dt;
+            s.y += dir.y * this.speed * dt;
+            this.walkTimer += dt * 8;
+            this.strobeTimer += dt;
+            if (this.strobeTimer >= 2.5 * tf) {
+                this.strobeAttack = (this.strobeAttack + 1) % 3;
+                this.strobeTimer = 0;
+                this.strobeState = 'TELEGRAPH';
+                this.beamAngle = Math.atan2(py - s.y, px - s.x); // зафиксировать прицел
+                this.beamActive = false;
+                this.beamTelegraph = (this.strobeAttack === 0);
+                this.burstCount = 0;
+                this.burstTimer = 0;
+                this._teleported = false;
+            }
+        } else if (this.strobeState === 'TELEGRAPH') {
+            this.strobeTimer += dt;
+            const telDur = (this.strobeAttack === 0 ? 0.9 : this.strobeAttack === 1 ? 0.5 : 0.4) * tf;
+            if (this.strobeTimer >= telDur) {
+                this.strobeTimer = 0;
+                this.strobeState = 'EXECUTE';
+                if (this.strobeAttack === 0) {
+                    this.beamTelegraph = false;
+                    this.beamActive = true;
+                    this.beamStart = this.beamAngle;
+                    this.beamSweep = (Math.random() < 0.5 ? 1 : -1) * Math.PI; // влево или вправо
+                } else if (this.strobeAttack === 1) {
+                    this.burstTimer = 1.0; // чтобы первое кольцо вылетело сразу
+                } else if (this.strobeAttack === 2) {
+                    this._teleported = false;
+                }
+            }
+        } else if (this.strobeState === 'EXECUTE') {
+            this.strobeTimer += dt;
+            if (this.strobeAttack === 0) {
+                const dur = 1.6 * tf;
+                const prog = clamp(this.strobeTimer / dur, 0, 1);
+                this.beamAngle = this.beamStart + this.beamSweep * prog;
+                if (this.strobeTimer >= dur) {
+                    this.beamActive = false;
+                    this.strobeState = 'RECOVER';
+                    this.strobeTimer = 0;
+                }
+            } else if (this.strobeAttack === 1) {
+                const rings = enraged ? 3 : 2;
+                this.burstTimer += dt;
+                if (this.burstCount < rings && this.burstTimer >= 0.28) {
+                    this.justFiredVolley = true;
+                    this.volleyTargetPos = { x: px, y: py };
+                    this.burstTimer = 0;
+                    this.burstCount++;
+                }
+                if (this.burstCount >= rings && this.burstTimer >= 0.28) {
+                    this.strobeState = 'RECOVER';
+                    this.strobeTimer = 0;
+                }
+            } else if (this.strobeAttack === 2) {
+                const normal = this.baseScale * 3.2;
+                const shrinkDur = 0.4 * tf;
+                const expandDur = 0.35 * tf;
+                if (!this._teleported) {
+                    // встаёт (раздувается) -> сжимается в точку, закручиваясь
+                    const k = clamp(this.strobeTimer / shrinkDur, 0, 1);
+                    const sc = (k < 0.25)
+                        ? normal * (1 + 0.15 * (k / 0.25))
+                        : normal * (1.15 - 1.05 * ((k - 0.25) / 0.75));
+                    s.setScale(sc, sc);
+                    s.angle = k * 540;
+                    if (this.strobeTimer >= shrinkDur) {
+                        const ang = Math.random() * Math.PI * 2;
+                        s.x = clamp(px + Math.cos(ang) * 600, 150, 2850);
+                        s.y = clamp(py + Math.sin(ang) * 600, 150, 2850);
+                        this._teleported = true;
+                        this.strobeTimer = 0;
+                        this.burstCount = 0;
+                        this.burstTimer = 1.0; // первый залп сразу после раскрытия
+                    }
+                } else if (this.strobeTimer < expandDur) {
+                    // раскрывается обратно в обычную форму
+                    const k = clamp(this.strobeTimer / expandDur, 0, 1);
+                    const sc = normal * (0.1 + 0.9 * k);
+                    s.setScale(sc, sc);
+                    s.angle = (1 - k) * 360;
+                } else {
+                    // обычная форма + 2 залпа дисков
+                    s.setScale(normal, normal);
+                    s.angle = 0;
+                    this.burstTimer += dt;
+                    if (this.burstCount < 2 && this.burstTimer >= 0.28) {
+                        this.justFiredVolley = true;
+                        this.volleyTargetPos = { x: px, y: py };
+                        this.burstTimer = 0;
+                        this.burstCount++;
+                    }
+                    if (this.burstCount >= 2 && this.burstTimer >= 0.28) {
+                        this.strobeState = 'RECOVER';
+                        this.strobeTimer = 0;
+                    }
+                }
+            }
+        } else if (this.strobeState === 'RECOVER') {
+            this.strobeTimer += dt;
+            if (this.strobeTimer >= 1.2 * tf) { this.strobeState = 'ROAM'; this.strobeTimer = 0; }
+        }
+    }
+
     update(dt, px, py, arenaW, arenaH) {
         const s = this.sprite;
 
@@ -376,6 +525,8 @@ class Enemy {
                 this.walkTimer += dt * 10;
                 s.angle = Math.sin(this.walkTimer) * 15;
             }
+        } else if (this.type === EnemyType.BOSS && this.isBoss3) {
+            this._updateStrobe(dt, px, py);
         } else if (this.type === EnemyType.BOSS) {
             this.justFiredVolley = false;
             const enraged = this.isBoss2 && (this.hp <= this.maxHp / 2);
@@ -499,6 +650,14 @@ class Enemy {
                         s.setTint(rgb(255, 40 + 100 * pulse, 0));
                     } else {
                         s.setTint(rgb(200, 80, 255));
+                    }
+                } else if (this.isBoss3) {
+                    // STROBE: показываем неоновый арт как есть; белая строб-вспышка при зарядке луча
+                    if (this.strobeState === 'TELEGRAPH') {
+                        const pulse = (Math.sin(this.strobeTimer * 30) + 1) / 2;
+                        s.setTint(rgb(180 + 75 * pulse, 255, 255));
+                    } else {
+                        s.clearTint();
                     }
                 } else {
                     s.setTint(rgb(255, 100, 255));
@@ -646,6 +805,8 @@ class BossSoul {
         const pulse = (Math.sin(this.animTimer * 3) + 1) / 2;
         if (this.soulType === 1) {
             this.sprite.setTint(rgb(200 + 55 * pulse, 50, 100 + 155 * pulse));
+        } else if (this.soulType === 3) {
+            this.sprite.setTint(rgb(0, 200 + 55 * pulse, 255)); // STROBE — циан
         } else {
             this.sprite.setTint(rgb(80 + 120 * pulse, 30 * pulse, 255));
         }
@@ -655,7 +816,7 @@ class BossSoul {
         this.glow.x = this.sprite.x;
         this.glow.y = this.sprite.y;
         const a = (25 + 20 * gp) / 255;
-        this.glow.setFillStyle(this.soulType === 1 ? rgb(200, 0, 180) : rgb(100, 0, 255), a);
+        this.glow.setFillStyle(this.soulType === 1 ? rgb(200, 0, 180) : this.soulType === 3 ? rgb(0, 220, 255) : rgb(100, 0, 255), a);
     }
 
     destroy() { this.sprite.destroy(); this.glow.destroy(); }

@@ -83,6 +83,7 @@ const I18N = {
         ability_desc_0: 'Become invulnerable\nfor 2 seconds.',
         ability_desc_1: 'Slam the ground to\ndamage and knock back\nnearby enemies.',
         ability_desc_2: 'Unleash 12 vinyl discs\nin all directions.',
+        ability_desc_3: 'Fire a piercing laser\nbeam toward the cursor.',
 
         // --- Тосты апгрейдов над игроком ---
         upgrade_toasts: ['UPGRADE: Fire Rate +', 'UPGRADE: Damage +', 'UPGRADE: Speed +', 'UPGRADE: Magnet +', 'UPGRADE: Max HP +1'],
@@ -98,7 +99,7 @@ const I18N = {
         ],
 
         // --- Способности ---
-        ability_names: ['INVINCIBILITY', 'GROUND SLAM', 'DISC STORM'],
+        ability_names: ['INVINCIBILITY', 'GROUND SLAM', 'DISC STORM', 'LASER'],
 
         // --- Магазин: дерево навыков ---
         shop_skilltree: 'SKILL TREE',
@@ -143,6 +144,7 @@ const I18N = {
         hud_hp: 'HP',
         boss_name: 'THE OVERSEER',
         boss2_name: 'BASS DROP',
+        boss3_name: 'STROBE',
         phase: 'PHASE',
         clear_all: 'CLEAR ALL ENEMIES',
     },
@@ -224,6 +226,7 @@ const I18N = {
         ability_desc_0: 'Неуязвимость\nна 2 секунды.',
         ability_desc_1: 'Удар по земле:\nурон и отбрасывание\nближних врагов.',
         ability_desc_2: 'Выпустить 12 дисков\nво все стороны.',
+        ability_desc_3: 'Выпустить пробивающий\nлуч в сторону курсора.',
 
         // --- Тосты апгрейдов над игроком ---
         upgrade_toasts: ['УЛУЧШЕНИЕ: Скорострельность +', 'УЛУЧШЕНИЕ: Урон +', 'УЛУЧШЕНИЕ: Скорость +', 'УЛУЧШЕНИЕ: Магнит +', 'УЛУЧШЕНИЕ: Макс. HP +1'],
@@ -239,7 +242,7 @@ const I18N = {
         ],
 
         // --- Способности ---
-        ability_names: ['НЕУЯЗВИМОСТЬ', 'УДАР ОЗЕМЬ', 'ВИХРЬ ДИСКОВ'],
+        ability_names: ['НЕУЯЗВИМОСТЬ', 'УДАР ОЗЕМЬ', 'ВИХРЬ ДИСКОВ', 'ЛАЗЕР'],
 
         // --- Магазин: дерево навыков ---
         shop_skilltree: 'ДЕРЕВО НАВЫКОВ',
@@ -248,7 +251,7 @@ const I18N = {
         shop_slots: 'СЛОТЫ',
         shop_back: '[ ESC  -  Назад ]',
         shop_max: 'МАКС',
-        shop_lv: 'Ур',
+        shop_lv: 'LVL',
         shop_locked: 'ЗАКРЫТО',
         shop_unequip: 'СНЯТЬ',
         shop_active: 'АКТИВЕН',
@@ -263,7 +266,7 @@ const I18N = {
         ],
         node_descs: [
             ['Сила атаки +1', '+5% к шансу крита', 'Каждый 8-й выстрел +1'],
-            ['Макс. HP +10', 'Лечит 10 HP со временем', '-20% урона / ур.'],
+            ['Макс. HP +10', 'Лечит 10 HP со временем', '-20% урона / LVL'],
             ['Скорость +10', 'Открыть/улучшить рывок', 'Радиус подбора +100'],
         ],
 
@@ -280,10 +283,11 @@ const I18N = {
         ],
 
         // --- HUD / игровой процесс ---
-        hud_lvl: 'УР',
+        hud_lvl: 'LVL',
         hud_hp: 'HP',
         boss_name: 'НАДЗИРАТЕЛЬ',
         boss2_name: 'БАС-ДРОП',
+        boss3_name: 'СТРОБ',
         phase: 'ЭТАП',
         clear_all: 'УНИЧТОЖЬТЕ ВСЕХ ВРАГОВ',
     },

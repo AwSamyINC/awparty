@@ -89,6 +89,7 @@ class MainScene extends Phaser.Scene {
         this.phase2Timer = 0;
         this.phase2BossSpawned = false;
         this.phase3Timer = 0;
+        this.phase3BossSpawned = false;
         this.phaseTransitionTimer = -1;
         this.phaseEventFired = false;
 
@@ -102,6 +103,7 @@ class MainScene extends Phaser.Scene {
         // Слэм-кольцо
         this.slamRingTimer = -1;
         this.slamRingCenter = { x: 0, y: 0 };
+        this.playerBeam = null; // визуал лазера игрока (затухает по таймеру)
 
         // Артефакт-аккумуляторы / реген
         this.bloodPactHealAcc = 0;
@@ -265,10 +267,10 @@ class MainScene extends Phaser.Scene {
         p.sprite.setPosition(C.ARENA_WIDTH / 2, C.ARENA_HEIGHT / 2);
         p.isInvincible = false; p.invincibilityTimer = 0;
 
-        this.survivalTimer = 0; this.vinylSpawnTimer = 0; this.phase2BossSpawned = false;
+        this.survivalTimer = 0; this.vinylSpawnTimer = 0; this.phase2BossSpawned = false; this.phase3BossSpawned = false;
         this.gamePhase = GamePhase.PHASE_1; this.phaseNotifTimer = 0; this.activeStep = 1;
         this.phase2Timer = 0; this.phase3Timer = 0; this.phaseTransitionTimer = -1; this.phaseEventFired = false;
-        this.slamRingTimer = -1;
+        this.slamRingTimer = -1; this.playerBeam = null;
 
         // Очистка сущностей (пулируемые — в пул, остальные — уничтожаем)
         this._clearArr(this.enemies);
@@ -415,7 +417,17 @@ class MainScene extends Phaser.Scene {
             if (this.phaseTransitionTimer >= 1.5) { this.phaseTransitionTimer = -1; this.phaseEventFired = false; }
         }
 
-        if (this.gamePhase === GamePhase.PHASE_3) this.phase3Timer += dt;
+        if (this.gamePhase === GamePhase.PHASE_3) {
+            this.phase3Timer += dt;
+            if (this.phase3Timer >= 60 && !this.phase3BossSpawned) {
+                const bp = findSpawnPos(px, py, C.ARENA_WIDTH, C.ARENA_HEIGHT, 800);
+                const boss3 = new Enemy(this, bp.x, bp.y, 'boss3');
+                boss3.makeBoss3('boss3');
+                if (s.isHardcoreMode) { boss3.speed *= 1.3; boss3.hp *= 2; boss3.maxHp *= 2; }
+                this.enemies.push(boss3);
+                this.phase3BossSpawned = true;
+            }
+        }
 
         if (this.gamePhase === GamePhase.PHASE_2) {
             this.phase2Timer += dt;
@@ -441,6 +453,7 @@ class MainScene extends Phaser.Scene {
         // Спавн врагов
         const spawningActive = (this.gamePhase !== GamePhase.CLEARING)
             && !(this.gamePhase === GamePhase.PHASE_2 && this.phase2BossSpawned)
+            && !(this.gamePhase === GamePhase.PHASE_3 && this.enemies.some(e => e.isBoss3))
             && (this.phaseTransitionTimer < 0);
         if (spawningActive) {
             const p2 = this.gamePhase === GamePhase.PHASE_2;
@@ -512,6 +525,23 @@ class MainScene extends Phaser.Scene {
                 p.takeDamage(e.damage);
                 if (p.hp < oldHp) { this.triggerShake(0.2, 2 * e.damage); this.audio.play('sfx_player_hurt'); }
                 if (p.hp <= 0 && !this.isGameOver) this.onPlayerDeath();
+            }
+
+            // Лазерный луч STROBE: урон, если игрок на линии луча (i-frames в takeDamage не дают слить HP)
+            if (e.isBoss3 && e.beamActive) {
+                const bx = e.sprite.x, by = e.sprite.y;
+                const dirx = Math.cos(e.beamAngle), diry = Math.sin(e.beamAngle);
+                const rx = px - bx, ry = py - by;
+                const proj = rx * dirx + ry * diry; // позиция вдоль луча
+                if (proj > 0 && proj < e.beamLen) {
+                    const perp = Math.abs(rx * -diry + ry * dirx); // отступ от линии
+                    if (perp < e.beamWidth / 2 + 40) {
+                        const oldHp = p.hp;
+                        p.takeDamage(40);
+                        if (p.hp < oldHp) { this.triggerShake(0.25, 80); this.audio.play('sfx_player_hurt'); }
+                        if (p.hp <= 0 && !this.isGameOver) this.onPlayerDeath();
+                    }
+                }
             }
 
             for (const b of this.bullets) {
@@ -607,6 +637,7 @@ class MainScene extends Phaser.Scene {
 
         // Слэм-кольцо
         if (this.slamRingTimer >= 0) { this.slamRingTimer += dt; if (this.slamRingTimer >= C.SLAM_RING_DURATION) this.slamRingTimer = -1; }
+        if (this.playerBeam) { this.playerBeam.timer -= dt; if (this.playerBeam.timer <= 0) this.playerBeam = null; }
 
         // Души боссов
         for (const soul of this.bossSouls) {
@@ -618,6 +649,7 @@ class MainScene extends Phaser.Scene {
                 for (let si = 0; si < 3; si++) if (this.equippedAbilities[si] < 0) { nextSlot = si; break; }
                 if (nextSlot >= 0) {
                     if (soul.soulType === 1) { this.pendingAbilityIds = [0, 1, -1]; this.pendingAbilityCount = 2; }
+                    else if (soul.soulType === 3) { this.pendingAbilityIds = [3, -1, -1]; this.pendingAbilityCount = 1; }
                     else { this.pendingAbilityIds = [2, -1, -1]; this.pendingAbilityCount = 1; }
                     this.pendingSlot = nextSlot;
                     this.abilitySelectAnimTimer = 0;
@@ -636,7 +668,7 @@ class MainScene extends Phaser.Scene {
         for (const e of this.enemies) {
             if (e.isBoss) {
                 bossExists = true; bossHpPct = Math.max(0, e.hp / e.maxHp);
-                this.hud.bossName.setText(e.isBoss2 ? t('boss2_name') : t('boss_name'));
+                this.hud.bossName.setText(e.isBoss3 ? t('boss3_name') : e.isBoss2 ? t('boss2_name') : t('boss_name'));
                 break;
             }
         }
@@ -784,12 +816,21 @@ class MainScene extends Phaser.Scene {
                 if (randInt(100) < 35) this.vinyls.push(this.spawnVinyl(ex, ey));
                 continue;
             }
-            const particleCount = e.isBoss2 ? 300 : (e.isBoss ? 200 : 15);
-            const c1 = e.isBoss2 ? rgb(200, 0, 255) : rgb(255, 20, 50);
-            const c2 = e.isBoss2 ? rgb(255, 100, 0) : rgb(255, 0, 150);
+            const particleCount = (e.isBoss2 || e.isBoss3) ? 300 : (e.isBoss ? 200 : 15);
+            const c1 = e.isBoss3 ? rgb(0, 230, 255) : e.isBoss2 ? rgb(200, 0, 255) : rgb(255, 20, 50);
+            const c2 = e.isBoss3 ? rgb(150, 255, 255) : e.isBoss2 ? rgb(255, 100, 0) : rgb(255, 0, 150);
             for (let i = 0; i < particleCount; i++) this.particles.push(this.spawnParticle(ex, ey, randInt(2) === 0 ? c1 : c2));
 
-            if (e.isBoss2) {
+            if (e.isBoss3) {
+                this.triggerShake(0.8, 70);
+                this.audio.play('sfx_boss_death', { volume: 1 });
+                this.bossSouls.push(new BossSoul(this, ex, ey, 3));
+                for (let k = 0; k < 20; k++) {
+                    this.gems.push(this.spawnGem(ex + randInt(150) - 75, ey + randInt(150) - 75));
+                    this.coins.push(this.spawnCoin(ex + randInt(150) - 75, ey + randInt(150) - 75));
+                }
+                for (let k = 0; k < 3; k++) this.vinyls.push(this.spawnVinyl(ex + randInt(80) - 40, ey + randInt(80) - 40));
+            } else if (e.isBoss2) {
                 this.triggerShake(0.8, 60);
                 this.audio.play('sfx_boss_death', { volume: 1 });
                 this.bossSouls.push(new BossSoul(this, ex, ey, 2));
@@ -855,6 +896,29 @@ class MainScene extends Phaser.Scene {
                 const angle = d * (2 * Math.PI / 12);
                 this.bullets.push(this.spawnBullet(px, py, Math.cos(angle), Math.sin(angle), 5, false));
             }
+        } else if (id === 3) {
+            // ЛАЗЕР: мгновенный пробивающий луч в сторону курсора
+            const ptr = this.input.activePointer;
+            const wp = this.cameras.main.getWorldPoint(ptr.x, ptr.y);
+            let dx = wp.x - px, dy = wp.y - py;
+            if (dx * dx + dy * dy < 1e-6) { dx = 1; dy = 0; }
+            const n = normalize(dx, dy);
+            const len = 1500, halfW = 70, dmg = 60;
+            for (const e of this.enemies) {
+                const rx = e.sprite.x - px, ry = e.sprite.y - py;
+                const proj = rx * n.x + ry * n.y;           // расстояние вдоль луча
+                if (proj > 0 && proj < len) {
+                    const perp = Math.abs(rx * -n.y + ry * n.x); // отступ от линии
+                    const hitR = e.isBoss ? 150 : 45;
+                    if (perp < halfW + hitR) {
+                        e.hp -= dmg; e.hitFlashTimer = 0.12;
+                        this.dmgTexts.push(this.spawnDamageText(e.sprite.x, e.sprite.y, dmg, true));
+                    }
+                }
+            }
+            this.playerBeam = { x: px, y: py, nx: n.x, ny: n.y, len: len, timer: 0.28 };
+            this.triggerShake(0.2, 22);
+            this.audio.play('sfx_slam', { volume: 0.5 });
         }
         this.abilityCooldowns[slot] = ABILITY_COOLDOWNS[id] || 1;
         this.abilityMaxCooldowns[slot] = this.abilityCooldowns[slot];
@@ -866,7 +930,7 @@ class MainScene extends Phaser.Scene {
         p.level++;
         p.currentXP -= p.xpToNextLevel;
         p.xpToNextLevel *= 1.5;
-        p.hp = p.maxHp;
+        p.hp = Math.min(p.maxHp, p.hp + 20); // не полное восстановление, а +20 HP
         this.levelUpAnimTimer = 0;
         const id1 = randInt(5);
         let id2, id3;
@@ -979,6 +1043,40 @@ class MainScene extends Phaser.Scene {
             g.lineStyle(3, rgb(255, 220, 80), alpha);
             g.strokeCircle(this.slamRingCenter.x, this.slamRingCenter.y, r);
         }
+        // Лазер игрока (способность LASER): затухающий пробивающий луч
+        if (this.playerBeam) {
+            const pb = this.playerBeam;
+            const a = clamp(pb.timer / 0.28, 0, 1);
+            const ex = pb.x + pb.nx * pb.len, ey = pb.y + pb.ny * pb.len;
+            g.lineStyle(80, rgb(0, 220, 255), 0.22 * a);
+            g.beginPath(); g.moveTo(pb.x, pb.y); g.lineTo(ex, ey); g.strokePath();
+            g.lineStyle(36, rgb(150, 245, 255), 0.5 * a);
+            g.beginPath(); g.moveTo(pb.x, pb.y); g.lineTo(ex, ey); g.strokePath();
+            g.lineStyle(10, rgb(255, 255, 255), 0.95 * a);
+            g.beginPath(); g.moveTo(pb.x, pb.y); g.lineTo(ex, ey); g.strokePath();
+        }
+        // Лазер STROBE: тонкий телеграф-прицел, затем толстый светящийся луч
+        for (const e of this.enemies) {
+            if (!e.isBoss3) continue;
+            const bx = e.sprite.x, by = e.sprite.y;
+            if (e.beamTelegraph) {
+                const ex = bx + Math.cos(e.beamAngle) * e.beamLen;
+                const ey = by + Math.sin(e.beamAngle) * e.beamLen;
+                const pulse = 0.3 + 0.4 * Math.abs(Math.sin(e.strobeTimer * 25));
+                g.lineStyle(4, rgb(120, 255, 255), pulse);
+                g.beginPath(); g.moveTo(bx, by); g.lineTo(ex, ey); g.strokePath();
+            }
+            if (e.beamActive) {
+                const ex = bx + Math.cos(e.beamAngle) * e.beamLen;
+                const ey = by + Math.sin(e.beamAngle) * e.beamLen;
+                g.lineStyle(e.beamWidth, rgb(0, 220, 255), 0.28);   // широкое свечение
+                g.beginPath(); g.moveTo(bx, by); g.lineTo(ex, ey); g.strokePath();
+                g.lineStyle(e.beamWidth * 0.5, rgb(150, 245, 255), 0.55);
+                g.beginPath(); g.moveTo(bx, by); g.lineTo(ex, ey); g.strokePath();
+                g.lineStyle(8, rgb(255, 255, 255), 0.95);           // яркое ядро
+                g.beginPath(); g.moveTo(bx, by); g.lineTo(ex, ey); g.strokePath();
+            }
+        }
     }
 
     // ===================== ОВЕРЛЕИ ИГРЫ (Game::render) =====================
@@ -1023,6 +1121,8 @@ class MainScene extends Phaser.Scene {
             warnA = Math.abs(Math.sin(this.survivalTimer * 10)) * 100 / 255; warnCol = 0xff0000;
         } else if (this.gamePhase === GamePhase.PHASE_2 && this.phase2Timer > 57 && this.phase2Timer < 60 && !this.phase2BossSpawned && !this.isGameOver) {
             warnA = Math.abs(Math.sin(this.phase2Timer * 10)) * 110 / 255; warnCol = 0x8200ff;
+        } else if (this.gamePhase === GamePhase.PHASE_3 && this.phase3Timer > 57 && this.phase3Timer < 60 && !this.phase3BossSpawned && !this.isGameOver) {
+            warnA = Math.abs(Math.sin(this.phase3Timer * 10)) * 110 / 255; warnCol = 0x00e6ff;
         }
         this.warnRect.setVisible(warnA > 0).setFillStyle(warnCol, warnA);
     }
@@ -1261,7 +1361,7 @@ class MainScene extends Phaser.Scene {
         const startX = W / 2 - totalW / 2;
         const cy = H / 2 + 20;
         const keyLabels = ['[Q]', '[E]', '[R]'];
-        const colHex = { 0: '#ffd700', 1: '#ff5000', 2: '#b400ff' };
+        const colHex = { 0: '#ffd700', 1: '#ff5000', 2: '#b400ff', 3: '#00e6ff' };
         this.abilityCards = [];
         for (let i = 0; i < count; i++) {
             const id = this.pendingAbilityIds[i];
@@ -1282,6 +1382,7 @@ class MainScene extends Phaser.Scene {
             if (id === 0) desc = t('ability_desc_0') + '\n\n' + t('cooldown') + ': ' + cd + 's';
             else if (id === 1) desc = t('ability_desc_1') + '\n\n' + t('cooldown') + ': ' + cd + 's';
             else if (id === 2) desc = t('ability_desc_2') + '\n\n' + t('cooldown') + ': ' + cd + 's';
+            else if (id === 3) desc = t('ability_desc_3') + '\n\n' + t('cooldown') + ': ' + cd + 's';
             const descObj = this._mText(cx, cy - cardH / 2 + 295, desc, 22, '#c8c3dc', 0.5, 0, '#000', 2);
             const slot = this.pendingSlot;
             const keyObj = this._mText(cx, cy + cardH / 2 - 70, (slot >= 0 && slot < 3) ? keyLabels[slot] : '[?]', 32, '#00f0c8', 0.5, 0, '#000', 2);

@@ -1356,7 +1356,7 @@ class MainScene extends Phaser.Scene {
         this.audio.play('sfx_menu_click');
         const i = this.selectedMenuIndex;
         if (i === 0) this.setState(GameState.LOBBY);
-        else if (i === 1) { this.leaderboardFromMenu = true; this.leaderboardNewEntryIndex = -1; this._pendingHighlight = null; this.lbView = this.save.isHardcoreMode ? 'hardcore' : 'normal'; this.setState(GameState.LEADERBOARD); }
+        else if (i === 1) { this.leaderboardFromMenu = true; this.leaderboardNewEntryIndex = -1; this._pendingHighlight = null; this.lbView = 'normal'; this.setState(GameState.LEADERBOARD); }
         else if (i === 2) this.setState(GameState.SETTINGS);
     }
     _lobbyActivate() {
@@ -1457,7 +1457,7 @@ class MainScene extends Phaser.Scene {
             if (this.isGameOver) {
                 if (code === 'KeyR') { this.saveGame(); this.resetGame(); this.rebuildMenu(); }
                 if (code === 'KeyQ') { this.saveGame(); this.setState(GameState.LOBBY); }
-                if (code === 'KeyL') { this.leaderboardFromMenu = false; this._pendingHighlight = null; this.lbView = this.save.isHardcoreMode ? 'hardcore' : 'normal'; this.setState(GameState.LEADERBOARD); }
+                if (code === 'KeyL') { this.leaderboardFromMenu = false; this._pendingHighlight = null; this.lbView = 'normal'; this.setState(GameState.LEADERBOARD); }
             } else {
                 if (esc) { this.selectedPauseIndex = 0; this.setState(GameState.PAUSED); }
                 if (code === 'KeyQ') this.activateAbility(0);

@@ -23,8 +23,8 @@ class Player {
         this.xpToNextLevel = 5;
         this.pickupRadius = 100;
 
-        this.maxHp = 3;
-        this.hp = 3;
+        this.maxHp = 100;
+        this.hp = 100;
         this.iFrames = 0;
         this.attackDamage = 1;
 
@@ -286,7 +286,7 @@ class Enemy {
         this.speed = 100;
         this.hp = 2;
         this.maxHp = 2;
-        this.damage = 1;
+        this.damage = 10; // урон по игроку в новой шкале (HP=100): десятки, не единицы
         this.walkTimer = randInt(100) / 10;
 
         this.type = EnemyType.NORMAL;
@@ -324,7 +324,7 @@ class Enemy {
         this.speed = 55;
         this.hp = 10 + playerLevel * 2;
         this.maxHp = this.hp;
-        this.damage = 1;
+        this.damage = 10;
         this.sprite.setScale(this.baseScale * 1.5, this.baseScale * 1.5);
     }
 
@@ -333,7 +333,7 @@ class Enemy {
         this.speed = 216;
         this.hp = 1;
         this.maxHp = 1;
-        this.damage = 1;
+        this.damage = 10;
         this.sprite.setScale(this.baseScale * 0.7, this.baseScale * 0.7);
     }
 
@@ -342,13 +342,13 @@ class Enemy {
         this.sprite.setTexture(goblinTexKey);
         this.sprite.setOrigin(0.5, 0.5);
         this._setTargetSize(105);
-        this.hp = 5; this.maxHp = 5; this.speed = 80; this.damage = 1;
+        this.hp = 5; this.maxHp = 5; this.speed = 80; this.damage = 10;
     }
 
     makeBoss() {
         this.isBoss = true;
         this.type = EnemyType.BOSS;
-        this.hp = 50; this.maxHp = 50; this.speed = 130; this.damage = 2;
+        this.hp = 50; this.maxHp = 50; this.speed = 130; this.damage = 20;
         this.sprite.setScale(this.baseScale * 3, this.baseScale * 3);
     }
 
@@ -358,7 +358,7 @@ class Enemy {
         this.sprite.setTexture(boss2TexKey);
         this.sprite.setOrigin(0.5, 0.5);
         this.baseScale = 90 / this.sprite.width;
-        this.hp = 100; this.maxHp = 100; this.speed = 150; this.damage = 3;
+        this.hp = 100; this.maxHp = 100; this.speed = 150; this.damage = 30;
         this.sprite.setScale(this.baseScale * 3.5, this.baseScale * 3.5);
     }
 
@@ -576,7 +576,7 @@ class EnemyProjectile {
 
     reinit(x, y, tx, ty) {
         this.isDestroyed = false;
-        this.damage = 1;
+        this.damage = 10; // дефолт в новой шкале; фактический урон проставляется от врага-стрелка
         const dir = normalize(tx - x, ty - y);
         this.vx = dir.x * 550;
         this.vy = dir.y * 550;

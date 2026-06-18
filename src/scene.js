@@ -254,7 +254,7 @@ class MainScene extends Phaser.Scene {
         this.bloodPactHealAcc = 0;
         this.coinCarry = 0;
 
-        if ((s.permActiveArtifacts >> 1) & 1) { p.maxHp = Math.max(1, p.maxHp - 2); p.hp = p.maxHp; }
+        if ((s.permActiveArtifacts >> 1) & 1) { p.maxHp = Math.max(10, p.maxHp - 20); p.hp = p.maxHp; }
 
         p.level = 1; p.currentXP = 0; p.xpToNextLevel = 5; p.shootCooldown = 0.45;
         this.regenTimer = 0; this.shotsFired = 0;
@@ -394,7 +394,7 @@ class MainScene extends Phaser.Scene {
         if (s.permRegen > 0 && p.hp < p.maxHp) {
             this.regenTimer += dt;
             const interval = 8 - s.permRegen; // макс уровень (3): 1 HP / 5 сек = 0.2 HP/с
-            if (this.regenTimer >= interval) { this.regenTimer = 0; p.hp = Math.min(p.hp + 1, p.maxHp); }
+            if (this.regenTimer >= interval) { this.regenTimer = 0; p.hp = Math.min(p.hp + 10, p.maxHp); }
         }
 
         // Переход фаз
@@ -489,13 +489,16 @@ class MainScene extends Phaser.Scene {
 
             if (e.justThrew) {
                 const pr = this.spawnEnemyProjectile(e.sprite.x, e.sprite.y, e.throwTargetPos.x, e.throwTargetPos.y);
+                pr.damage = e.damage; // снаряд наследует урон стрелка (10/20/30 по этапу)
                 this.enemyProjectiles.push(pr);
             }
             if (e.justFiredVolley) {
                 for (let v = 0; v < 12; v++) {
                     const ang = v * (2 * Math.PI / 12);
                     const dir = { x: Math.cos(ang), y: Math.sin(ang) };
-                    this.enemyProjectiles.push(this.spawnEnemyProjectile(e.sprite.x, e.sprite.y, e.sprite.x + dir.x * 500, e.sprite.y + dir.y * 500));
+                    const pr = this.spawnEnemyProjectile(e.sprite.x, e.sprite.y, e.sprite.x + dir.x * 500, e.sprite.y + dir.y * 500);
+                    pr.damage = e.damage; // волна босса: урон = урон босса
+                    this.enemyProjectiles.push(pr);
                 }
             }
 
@@ -503,7 +506,7 @@ class MainScene extends Phaser.Scene {
             if (distSq(e.sprite.x, e.sprite.y, px, py) < attackDist) {
                 const oldHp = p.hp;
                 p.takeDamage(e.damage);
-                if (p.hp < oldHp) { this.triggerShake(0.2, 20 * e.damage); this.audio.play('sfx_player_hurt'); }
+                if (p.hp < oldHp) { this.triggerShake(0.2, 2 * e.damage); this.audio.play('sfx_player_hurt'); }
                 if (p.hp <= 0 && !this.isGameOver) this.onPlayerDeath();
             }
 
@@ -574,7 +577,7 @@ class MainScene extends Phaser.Scene {
         // Пластинки
         for (const v of this.vinyls) {
             v.update(dt);
-            if (distSq(v.sprite.x, v.sprite.y, px, py) < 2500) { v.isCollected = true; if (p.hp < p.maxHp) p.hp += 1; }
+            if (distSq(v.sprite.x, v.sprite.y, px, py) < 2500) { v.isCollected = true; if (p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + 10); }
         }
         this._filterRelease(this.vinyls, 'vinyl', v => v.isCollected);
 
@@ -765,14 +768,9 @@ class MainScene extends Phaser.Scene {
                 const cap = p.baseCritChance + 0.05;
                 p.critChance = Math.min(cap, p.critChance + 0.005);
             }
-            // BLOOD PACT: вампиризм за килл — 0.2 HP за убийство (копится до целого HP).
+            // BLOOD PACT: вампиризм за килл — 2 HP за убийство (новая шкала HP=100).
             if (((s.permActiveArtifacts >> 0) & 1) && p.hp < p.maxHp) {
-                this.bloodPactHealAcc += 0.2;
-                if (this.bloodPactHealAcc >= 1) {
-                    const heal = Math.floor(this.bloodPactHealAcc);
-                    p.hp = Math.min(p.maxHp, p.hp + heal);
-                    this.bloodPactHealAcc -= heal;
-                }
+                p.hp = Math.min(p.maxHp, p.hp + 2);
             }
             const ex = e.sprite.x, ey = e.sprite.y;
             if (e.type === EnemyType.GOBLIN) {
@@ -884,7 +882,7 @@ class MainScene extends Phaser.Scene {
         else if (id === 1) p.attackDamage += 1;
         else if (id === 2 && p.speed < 400) p.speed += 20;
         else if (id === 3 && p.pickupRadius < 600) p.pickupRadius += 50;
-        else if (id === 4) { p.maxHp += 1; p.hp = p.maxHp; }
+        else if (id === 4) { p.maxHp += 10; p.hp = p.maxHp; }
         p.lastUpgradeId = id;
         p.messageTimer = 2.0;
         if (id >= 0 && id < 5) this.runUpgradeLevels[id]++;

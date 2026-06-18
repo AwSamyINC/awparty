@@ -72,7 +72,7 @@ const UPGRADE_DESCS = [
     'Increases bullet\ndamage.',
     'Increases movement\nspeed.',
     'Increases pickup\nradius.',
-    'Increases Max HP\nby 1.',
+    'Increases Max HP\nby 10.',
 ];
 const UPGRADE_ICONS = ['icon_fire', 'icon_dmg', 'icon_speed', 'icon_magnet', 'icon_hp'];
 
@@ -83,8 +83,8 @@ const ABILITY_ICONS = { '-10': 'ability_dash', 0: 'ability_invincible', 1: 'abil
 
 // Artifact info (ShopUI.cpp)
 const ARTIFACTS = [
-    { name: 'BLOOD PACT', desc: 'Kill heals 0.2 HP', cost: 800 },
-    { name: 'GLASS CANNON', desc: '+30% dmg, Max HP -2', cost: 1000 },
+    { name: 'BLOOD PACT', desc: 'Kill heals 2 HP', cost: 800 },
+    { name: 'GLASS CANNON', desc: '+30% dmg, Max HP -20', cost: 1000 },
     { name: 'ECHO CHAMBER', desc: 'Bullets ricochet off walls', cost: 1100 },
     { name: 'SOUL LEECH', desc: '+0.5% crit/kill  (max +5%)', cost: 1400 },
     { name: 'BERSERKER', desc: 'HP<=40%: dmg x1.5, no dash slow', cost: 1500 },

@@ -32,7 +32,7 @@ class HUD {
         const hpW = 400;
         this.hpBg = add(this.scene.add.rectangle(W / 2 - hpW / 2, H - 60, hpW, 30, 0x280000).setOrigin(0, 0).setStrokeStyle(4, 0xff0032));
         this.hpFill = add(this.scene.add.rectangle(W / 2 - hpW / 2, H - 60, hpW, 30, 0xff3232).setOrigin(0, 0));
-        this.hpText = add(this.scene.add.text(W / 2, H - 45, 'HP 3 / 3', { fontFamily: FONT, fontSize: '24px', color: '#fff', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0.5));
+        this.hpText = add(this.scene.add.text(W / 2, H - 45, 'HP 100 / 100', { fontFamily: FONT, fontSize: '24px', color: '#fff', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0.5));
 
         // --- TIMER ---
         this.timerText = add(this.scene.add.text(W / 2, 90, '00:00', { fontFamily: FONT, fontSize: '50px', color: '#ff0096', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 0.5));

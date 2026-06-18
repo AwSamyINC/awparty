@@ -14,7 +14,7 @@ const NODE_TITLES = [
 ];
 const NODE_DESCS = [
     ['Attack power +1', '+5% crit chance', 'Every 8th shot +1'],
-    ['Max HP +1', 'Heal 1 HP over time', '-20% damage / lvl'],
+    ['Max HP +10', 'Heal 10 HP over time', '-20% damage / lvl'],
     ['Move speed +10', 'Unlock/upgrade dash', 'Pickup radius +100'],
 ];
 const BRANCH_NAMES = ['ATTACK', 'SURVIVAL', 'MOBILITY'];
@@ -50,7 +50,7 @@ class Shop {
             case 0: return this.s.permDamage - 1;
             case 1: return this.s.permCritChance;
             case 2: return this.s.permMultishot;
-            case 3: return this.s.permMaxHp - 3;
+            case 3: return (this.s.permMaxHp - 100) / 10;
             case 4: return this.s.permRegen;
             case 5: return this.s.permArmor;
             case 6: return Math.floor((this.s.permSpeed - 220) / 10);
@@ -152,7 +152,7 @@ class Shop {
             case 0: s.permDamage++; break;
             case 1: s.permCritChance++; break;
             case 2: s.permMultishot++; break;
-            case 3: s.permMaxHp++; break;
+            case 3: s.permMaxHp += 10; break;
             case 4: s.permRegen++; break;
             case 5: s.permArmor++; break;
             case 6: s.permSpeed += 10; break;

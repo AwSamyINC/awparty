@@ -66,7 +66,8 @@ class EnemySpawner {
                 if (chance < 20) { e.makeFast(); e.hp += 2; e.maxHp += 2; e.damage += 2; }
                 else if (chance < 32) { e.makeTank(1); e.hp += 2; e.maxHp += 2; e.damage += 2; }
                 else { e.hp = e.maxHp = 4; e.damage = 3; }
-                if (isHardcore) { e.speed *= 1.5; e.hp *= SPAWN_HARDCORE_HP; e.maxHp *= SPAWN_HARDCORE_HP; }
+                e.speed *= 1.25; // скорость как на этапе 2
+                if (isHardcore) { e.hp *= SPAWN_HARDCORE_HP; e.maxHp *= SPAWN_HARDCORE_HP; }
                 enemies.push(e);
                 this.spawnTimer = 0;
             }
@@ -75,7 +76,8 @@ class EnemySpawner {
                 const g = new Enemy(scene, p.x, p.y, enemyKey);
                 g.makeGoblin(goblinKey);
                 g.hp += 2; g.maxHp += 2; g.damage += 2;
-                if (isHardcore) { g.speed *= 1.5; g.hp *= SPAWN_HARDCORE_HP; g.maxHp *= SPAWN_HARDCORE_HP; }
+                g.speed *= 1.25; // скорость как на этапе 2
+                if (isHardcore) { g.hp *= SPAWN_HARDCORE_HP; g.maxHp *= SPAWN_HARDCORE_HP; }
                 enemies.push(g);
                 this.goblinSpawnTimer = 0;
             }

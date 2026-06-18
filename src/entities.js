@@ -294,6 +294,7 @@ class Enemy {
 
         this.goblinState = GoblinState.WALKING;
         this.goblinTimer = 0;
+        this.goblinStationed = false; // гоблин-стрелок: встал на позицию (игрок его увидел) и больше не двигается
         this.throwTargetPos = { x: 0, y: 0 };
         this.justThrew = false;
         this.justFiredVolley = false;
@@ -414,29 +415,50 @@ class Enemy {
 
         if (this.type === EnemyType.GOBLIN) {
             this.justThrew = false;
-            this.goblinTimer += dt;
-            if (this.goblinState === GoblinState.WALKING) {
-                // Гоблин-стрелок не бегает: стоит на месте и ведёт прицельный огонь.
-                this.walkTimer += dt * 8;
-                s.angle = Math.sin(this.walkTimer) * 4; // лёгкое покачивание на месте
-                if (this.goblinTimer >= 2.5) {
-                    this.goblinState = GoblinState.PREPARING;
-                    this.throwTargetPos = { x: px, y: py };
+
+            // Пока игрок не увидел гоблина на экране — гоблин идёт к нему и не стреляет.
+            // Как только попал в кадр — встаёт на позицию и дальше только стоит и стреляет.
+            if (!this.goblinStationed) {
+                const view = this.scene.cameras.main.worldView;
+                const onScreen = s.x >= view.x && s.x <= view.right && s.y >= view.y && s.y <= view.bottom;
+                if (onScreen) {
+                    this.goblinStationed = true;
+                    this.goblinState = GoblinState.WALKING;
                     this.goblinTimer = 0;
+                } else {
+                    const dir = normalize(px - s.x, py - s.y);
+                    s.x += dir.x * this.speed * dt;
+                    s.y += dir.y * this.speed * dt;
+                    this.walkTimer += dt * 8;
+                    s.angle = Math.sin(this.walkTimer) * 8;
                 }
-            } else if (this.goblinState === GoblinState.PREPARING) {
-                s.angle = Math.sin(this.goblinTimer * 28) * 14;
-                const pulse = 1 + Math.sin(this.goblinTimer * 18) * 0.08;
-                s.setScale(this.baseScale * pulse, this.baseScale / pulse);
-                if (this.goblinTimer >= 1.2) { this.goblinState = GoblinState.THROWING; this.goblinTimer = 0; }
-            } else if (this.goblinState === GoblinState.THROWING) {
-                this.justThrew = true;
-                s.angle = 0;
-                s.setScale(this.baseScale, this.baseScale);
-                this.goblinState = GoblinState.RECOVERING;
-                this.goblinTimer = 0;
-            } else if (this.goblinState === GoblinState.RECOVERING) {
-                if (this.goblinTimer >= 2.0) { this.goblinState = GoblinState.WALKING; this.goblinTimer = 0; }
+            }
+
+            if (this.goblinStationed) {
+                this.goblinTimer += dt;
+                if (this.goblinState === GoblinState.WALKING) {
+                    // Гоблин-стрелок не бегает: стоит на месте и ведёт прицельный огонь.
+                    this.walkTimer += dt * 8;
+                    s.angle = Math.sin(this.walkTimer) * 4; // лёгкое покачивание на месте
+                    if (this.goblinTimer >= 2.5) {
+                        this.goblinState = GoblinState.PREPARING;
+                        this.throwTargetPos = { x: px, y: py };
+                        this.goblinTimer = 0;
+                    }
+                } else if (this.goblinState === GoblinState.PREPARING) {
+                    s.angle = Math.sin(this.goblinTimer * 28) * 14;
+                    const pulse = 1 + Math.sin(this.goblinTimer * 18) * 0.08;
+                    s.setScale(this.baseScale * pulse, this.baseScale / pulse);
+                    if (this.goblinTimer >= 1.2) { this.goblinState = GoblinState.THROWING; this.goblinTimer = 0; }
+                } else if (this.goblinState === GoblinState.THROWING) {
+                    this.justThrew = true;
+                    s.angle = 0;
+                    s.setScale(this.baseScale, this.baseScale);
+                    this.goblinState = GoblinState.RECOVERING;
+                    this.goblinTimer = 0;
+                } else if (this.goblinState === GoblinState.RECOVERING) {
+                    if (this.goblinTimer >= 2.0) { this.goblinState = GoblinState.WALKING; this.goblinTimer = 0; }
+                }
             }
         }
 

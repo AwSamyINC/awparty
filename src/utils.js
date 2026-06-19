@@ -41,6 +41,22 @@ function clamp(v, lo, hi) {
     return v < lo ? lo : (v > hi ? hi : v);
 }
 
+// Число с разделителем тысяч (узкий пробел): 12345 -> "12 345".
+function fmtNum(n) {
+    return String(Math.round(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+// Сравнение записей рекордов: приоритет у очков (score), при равенстве — у времени (time).
+// Для сортировки по убыванию (лучшие сверху): list.sort(lbCompare).
+function lbCompare(a, b) {
+    return (b.score || 0) - (a.score || 0) || (b.time || 0) - (a.time || 0);
+}
+
+// Пустая запись таблицы рекордов.
+function lbEmptyEntry() {
+    return { name: '', score: 0, time: 0, day: 0, month: 0, year: 0 };
+}
+
 // Форматирование MM:SS как в Game::update
 function formatTime(totalSeconds) {
     const m = Math.floor(totalSeconds / 60);

@@ -44,6 +44,7 @@ const I18N = {
         lb_normal: 'NORMAL',
         lb_col_num: '#',
         lb_col_name: 'NAME',
+        lb_col_score: 'SCORE',
         lb_col_time: 'TIME',
         lb_col_date: 'DATE',
         lb_hint_switch: '<  /  >   -   Normal / Hardcore',
@@ -61,7 +62,8 @@ const I18N = {
 
         // --- Ввод имени (новый рекорд) ---
         name_new_record: 'NEW RECORD!',
-        name_time: 'Time Survived:',
+        name_score: 'Score:',
+        name_time: 'Time:',
         name_enter: 'Enter your name:',
         name_hint: 'ENTER  -  Confirm        BACKSPACE  -  Erase',
         err_enter_name: 'Enter a name',
@@ -169,12 +171,22 @@ const I18N = {
         build_artifacts: 'Artifacts',
         build_none: '—',
         summary_title: 'RUN SUMMARY',
+        summary_score: 'Score',
         summary_time: 'Time',
         summary_level: 'Level',
         summary_kills: 'Kills',
         summary_coins: 'Coins',
         gameover_title: 'GAME OVER',
         gameover_hint: 'R  -  Restart        Q  -  Hub',
+
+        // --- Безумный этап / портал (после третьего босса) ---
+        crazy_title: 'FRENZY',
+        crazy_hint: 'ENEMIES ENRAGED — ESCAPE THROUGH THE PORTAL',
+        stageclear_title: 'STAGES CLEARED',
+        stageclear_sub: 'You broke through all three stages',
+        stageclear_stage: 'Stage',
+        stageclear_total: 'TOTAL',
+        stageclear_hub: 'GO TO HUB',
 
         // --- Облачное восстановление прогресса ---
         set_cloud: 'Cloud Restore',
@@ -231,6 +243,7 @@ const I18N = {
         lb_normal: 'ОБЫЧНЫЙ',
         lb_col_num: '#',
         lb_col_name: 'ИМЯ',
+        lb_col_score: 'ОЧКИ',
         lb_col_time: 'ВРЕМЯ',
         lb_col_date: 'ДАТА',
         lb_hint_switch: '<  /  >   -   Обычный / Хардкор',
@@ -248,7 +261,8 @@ const I18N = {
 
         // --- Ввод имени (новый рекорд) ---
         name_new_record: 'НОВЫЙ РЕКОРД!',
-        name_time: 'Продержался:',
+        name_score: 'Очки:',
+        name_time: 'Время:',
         name_enter: 'Введите имя:',
         name_hint: 'ENTER  -  Подтвердить        BACKSPACE  -  Стереть',
         err_enter_name: 'Введите имя',
@@ -356,12 +370,22 @@ const I18N = {
         build_artifacts: 'Артефакты',
         build_none: '—',
         summary_title: 'ИТОГИ ЗАБЕГА',
+        summary_score: 'Очки',
         summary_time: 'Время',
         summary_level: 'Уровень',
         summary_kills: 'Убито',
         summary_coins: 'Монеты',
         gameover_title: 'ИГРА ОКОНЧЕНА',
         gameover_hint: 'R  -  Заново        Q  -  В хаб',
+
+        // --- Безумный этап / портал (после третьего босса) ---
+        crazy_title: 'БЕЗУМИЕ',
+        crazy_hint: 'ВРАГИ В ЯРОСТИ — УХОДИ В ПОРТАЛ',
+        stageclear_title: 'ЭТАПЫ ПРОЙДЕНЫ',
+        stageclear_sub: 'Ты прорвался через все три этапа',
+        stageclear_stage: 'Этап',
+        stageclear_total: 'ИТОГО',
+        stageclear_hub: 'ПЕРЕЙТИ В ХАБ',
 
         // --- Облачное восстановление прогресса ---
         set_cloud: 'Восстановить из облака',

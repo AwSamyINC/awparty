@@ -100,6 +100,14 @@ class MainScene extends Phaser.Scene {
         this.phaseTransitionTimer = -1;
         this.phaseEventFired = false;
 
+        // «Безумный» этап после третьего босса
+        this.crazyMode = false;          // x5 HP мобам, монеты не падают, открыт портал
+        this.portal = null;              // { x, y } — позиция портала-выхода в мире
+        this.portalSprite = null;        // спрайт портала (portal.png), если ассет загружен
+        this.stageStats = [];            // итоги по 3 этапам: [{ time, kills, coins, score }]
+        this._stagePrev = { time: 0, kills: 0, coins: 0, score: 0 }; // снимок на начало этапа
+        this.runScore = 0;               // счёт забега (метрика рекордов)
+
         // Способности
         this.equippedAbilities = [-1, -1, -1];
         this.abilityCooldowns = [0, 0, 0];
@@ -298,7 +306,7 @@ class MainScene extends Phaser.Scene {
 
         p.level = 1; p.currentXP = 0; p.xpToNextLevel = 5; p.shootCooldown = 0.45;
         this.regenTimer = 0; this.shotsFired = 0;
-        this.killCount = 0; this.coinsThisRun = 0; // статистика забега (для паузы/итогов)
+        this.killCount = 0; this.coinsThisRun = 0; this.runScore = 0; // статистика забега (для паузы/итогов/рекордов)
         p.sprite.setPosition(C.ARENA_WIDTH / 2, C.ARENA_HEIGHT / 2);
         p.isInvincible = false; p.invincibilityTimer = 0;
         p.bladeMail = false; p.pierce = false; // карточки: блейдмейл (шипы) / прострел (пробитие)
@@ -306,6 +314,9 @@ class MainScene extends Phaser.Scene {
         this.survivalTimer = 0; this.vinylSpawnTimer = 0; this.phase2BossSpawned = false; this.phase3BossSpawned = false;
         this.gamePhase = GamePhase.PHASE_1; this.phaseNotifTimer = 0; this.activeStep = 1;
         this.phase2Timer = 0; this.phase3Timer = 0; this.phaseTransitionTimer = -1; this.phaseEventFired = false;
+        this.crazyMode = false; this.portal = null; this._stageClearAfterName = false;
+        if (this.portalSprite) { this.portalSprite.destroy(); this.portalSprite = null; }
+        this.stageStats = []; this._stagePrev = { time: 0, kills: 0, coins: 0, score: 0 };
         this.slamRingTimer = -1; this.playerBeam = null;
 
         // Очистка сущностей (пулируемые — в пул, остальные — уничтожаем)
@@ -469,8 +480,10 @@ class MainScene extends Phaser.Scene {
             if (!this.phaseEventFired && this.phaseTransitionTimer >= 0.7) {
                 this.phaseEventFired = true;
                 if (this.gamePhase === GamePhase.CLEARING) {
+                    this._snapshotStage(); // итоги этапа 1
                     this.gamePhase = GamePhase.PHASE_2; this.phaseNotifTimer = 0; this.activeStep = 2; this.phase2Timer = 0; this.spawner.resetForPhase2();
                 } else if (this.gamePhase === GamePhase.PHASE_2) {
+                    this._snapshotStage(); // итоги этапа 2
                     this.gamePhase = GamePhase.PHASE_3; this.phaseNotifTimer = 0; this.activeStep = 3; this.phase3Timer = 0; this.spawner.resetForPhase2();
                 }
             }
@@ -501,6 +514,13 @@ class MainScene extends Phaser.Scene {
                 this.enemies.push(boss2);
                 this.phase2BossSpawned = true;
             }
+        }
+
+        // Вход в портал (безумный этап): игрок дошёл до портала — показываем итоги 3 этапов.
+        if (this.crazyMode && this.portal &&
+            distSq(px, py, this.portal.x, this.portal.y) < C.PORTAL_RADIUS * C.PORTAL_RADIUS) {
+            this._enterPortal();
+            return;
         }
 
         // Vinyl спавн каждые 60с
@@ -840,6 +860,8 @@ class MainScene extends Phaser.Scene {
         for (const e of this.enemies) {
             if (e.hp > 0) continue;
             this.killCount++;
+            // Очки за убийство (боссы дают больше). В безумном этапе очки не начисляются.
+            if (!this.crazyMode) this.runScore += this._scoreFor(e);
             if ((s.permActiveArtifacts >> 3) & 1) {
                 // +0.5% крита за килл, максимум +5% к базе (10 стаков).
                 const cap = p.baseCritChance + 0.05;
@@ -853,7 +875,7 @@ class MainScene extends Phaser.Scene {
             if (e.type === EnemyType.GOBLIN) {
                 for (let i = 0; i < 30; i++) this.particles.push(this.spawnParticle(ex, ey, randInt(2) === 0 ? rgb(180, 0, 255) : rgb(255, 0, 200)));
                 for (let k = 0; k < 3; k++) this.gems.push(this.spawnGem(ex - 24 + randInt(40) - 20, ey + randInt(40) - 20));
-                if (randInt(100) < 50) this.coins.push(this.spawnCoin(ex + 38, ey)); // монет вдвое меньше
+                if (!this.crazyMode && randInt(100) < 50) this.coins.push(this.spawnCoin(ex + 38, ey)); // монет вдвое меньше; в безумном этапе монет нет
                 if (randInt(100) < 35) this.vinyls.push(this.spawnVinyl(ex, ey));
                 continue;
             }
@@ -871,6 +893,7 @@ class MainScene extends Phaser.Scene {
                     this.coins.push(this.spawnCoin(ex + randInt(150) - 75, ey + randInt(150) - 75));
                 }
                 for (let k = 0; k < 3; k++) this.vinyls.push(this.spawnVinyl(ex + randInt(80) - 40, ey + randInt(80) - 40));
+                this._startCrazyMode(); // 3-й босс мёртв — этап сходит с ума, открывается портал
             } else if (e.isBoss2) {
                 this.triggerShake(0.8, 60);
                 this.audio.play('sfx_boss_death', { volume: 1 });
@@ -894,10 +917,72 @@ class MainScene extends Phaser.Scene {
                 // Гем и монета разнесены в стороны, чтобы опыт не лежал под монетой.
                 const off = 24;
                 this.gems.push(this.spawnGem(ex - off, ey));
-                if (randInt(100) < 15) this.coins.push(this.spawnCoin(ex + off, ey)); // монет вдвое меньше (30%→15%)
+                if (!this.crazyMode && randInt(100) < 15) this.coins.push(this.spawnCoin(ex + off, ey)); // монет вдвое меньше (30%→15%); в безумном этапе монет нет
                 if (randInt(100) < 2) this.vinyls.push(this.spawnVinyl(ex, ey));
             }
         }
+    }
+
+    // ===================== БЕЗУМНЫЙ ЭТАП / ПОРТАЛ =====================
+    // Сколько очков даёт убийство врага e (боссы — больше).
+    _scoreFor(e) {
+        const S = C.SCORE;
+        if (e.isBoss3) return S.BOSS3;
+        if (e.isBoss2) return S.BOSS2;
+        if (e.isBoss) return S.BOSS1;
+        if (e.type === EnemyType.GOBLIN) return S.GOBLIN;
+        if (e.type === EnemyType.FAST) return S.FAST;
+        if (e.type === EnemyType.TANK) return S.TANK;
+        return S.NORMAL;
+    }
+
+    // Записать итоги завершившегося этапа как дельту от прошлого снимка.
+    _snapshotStage() {
+        this.stageStats.push({
+            time: this.survivalTimer - this._stagePrev.time,
+            kills: this.killCount - this._stagePrev.kills,
+            coins: this.coinsThisRun - this._stagePrev.coins,
+            score: this.runScore - this._stagePrev.score,
+        });
+        this._stagePrev = { time: this.survivalTimer, kills: this.killCount, coins: this.coinsThisRun, score: this.runScore };
+    }
+
+    // Третий босс убит: этап сходит с ума (x5 HP мобам, монет больше нет),
+    // по центру вверху карты открывается портал — единственный выход.
+    _startCrazyMode() {
+        if (this.crazyMode) return;
+        this._snapshotStage(); // итоги этапа 3 (до начала безумия)
+        this.crazyMode = true;
+        this.portal = { x: C.ARENA_WIDTH / 2, y: C.PORTAL_TOP_MARGIN };
+        // Спрайт портала (если ассет есть) — под игроком (depth 8), с неоновым ореолом из вектора.
+        if (this.textures.exists('portal')) {
+            this.portalSprite = this.addWorld(this.add.image(this.portal.x, this.portal.y, 'portal')).setDepth(8);
+            this.portalSprite.setDisplaySize(C.PORTAL_RADIUS * 2.6, C.PORTAL_RADIUS * 2.6);
+            this._portalBaseScale = this.portalSprite.scaleX;
+        }
+        this.phaseNotifTimer = 0; // переиспользуем уведомление под «БЕЗУМИЕ»
+        this.activeStep = 4;      // 4 — специальный шаг для подписи «БЕЗУМИЕ»
+        this.audio.play('sfx_boss_warning', { volume: 0.7 });
+    }
+
+    // Игрок вошёл в портал — фиксируем результат и показываем итоги 3 этапов.
+    _enterPortal() {
+        this.audio.play('sfx_menu_click');
+        this.saveGame();
+        // Результат проходит в таблицу: если ник уже есть — тихо отправляем и показываем итоги.
+        // Если ника ещё нет (первый забег) — просим ввести, а итоги покажем после ввода.
+        if (this.qualifiesForLeaderboard(this.runScore, this.survivalTimer, this._runMode())) {
+            if (this.save.playerName) {
+                this._submitScore(this.save.playerName, false);
+            } else {
+                this._stageClearAfterName = true; // после ввода ника вернуться к итогам, а не к таблице
+                this.nameInput = '';
+                this._nameError = '';
+                this.setState(GameState.NAME_INPUT);
+                return;
+            }
+        }
+        this.setState(GameState.STAGE_CLEAR);
     }
 
     // ===================== СПОСОБНОСТИ (activateAbility) =====================
@@ -1099,6 +1184,47 @@ class MainScene extends Phaser.Scene {
                 g.beginPath(); g.moveTo(bx, by); g.lineTo(ex, ey); g.strokePath();
             }
         }
+        // Портал безумного этапа: неоновая воронка из вращающихся колец.
+        if (this.crazyMode && this.portal) this._drawPortal(g);
+    }
+
+    // Неоновый портал-воронка (синтвейв STROBE): пульсирующее свечение + концентрические
+    // вращающиеся кольца + яркое ядро. Цвета совпадают с боссом-СТРОБОМ (cyan/magenta).
+    _drawPortal(g) {
+        const px = this.portal.x, py = this.portal.y, T = this.globalTime;
+        const R = C.PORTAL_RADIUS;
+        const pulse = 0.5 + 0.5 * Math.sin(T * 4);
+        // Неоновый ореол под спрайтом (или сам портал, если ассета нет)
+        g.fillStyle(rgb(0, 230, 255), 0.12 + 0.07 * pulse);
+        g.fillCircle(px, py, R * 1.7);
+        g.fillStyle(rgb(200, 0, 255), 0.12 + 0.07 * pulse);
+        g.fillCircle(px, py, R * 1.25);
+
+        if (this.portalSprite) {
+            // Анимация спрайта: медленное вращение против часовой стрелки + пульсация масштаба.
+            this.portalSprite.rotation = -T * 0.5;
+            this.portalSprite.setScale(this._portalBaseScale * (1 + 0.06 * pulse));
+            return;
+        }
+
+        // Фолбэк без ассета: векторная воронка.
+        for (let i = 0; i < 4; i++) {
+            const rr = R * (0.45 + i * 0.18) + Math.sin(T * 3 + i) * 6;
+            const col = (i % 2 === 0) ? rgb(0, 230, 255) : rgb(200, 0, 255);
+            g.lineStyle(5 - i * 0.6, col, 0.85 - i * 0.12);
+            g.strokeCircle(px, py, rr);
+        }
+        g.lineStyle(2, rgb(150, 245, 255), 0.5 + 0.3 * pulse);
+        for (let i = 0; i < 8; i++) {
+            const a = T * 1.6 + i * (Math.PI / 4);
+            const r0 = R * 0.18, r1 = R * 0.9;
+            g.beginPath();
+            g.moveTo(px + Math.cos(a) * r0, py + Math.sin(a) * r0);
+            g.lineTo(px + Math.cos(a) * r1, py + Math.sin(a) * r1);
+            g.strokePath();
+        }
+        g.fillStyle(rgb(255, 255, 255), 0.6 + 0.4 * pulse);
+        g.fillCircle(px, py, R * 0.16 + 4 * pulse);
     }
 
     // ===================== ОВЕРЛЕИ ИГРЫ (Game::render) =====================
@@ -1123,18 +1249,24 @@ class MainScene extends Phaser.Scene {
             this.fadeRect.setVisible(false);
         }
 
-        // Уведомление о фазе
+        // Уведомление о фазе (шаг 4 — «БЕЗУМИЕ» после третьего босса)
         if (this.activeStep > 0 && this.phaseNotifTimer < 3.5 && !this.isGameOver) {
             const alpha = this.phaseNotifTimer > 2.5 ? 1 - (this.phaseNotifTimer - 2.5) : 1;
-            let col = '#00ffc8';
-            if (this.activeStep === 2) col = '#ff5050'; else if (this.activeStep === 3) col = '#ff8c00';
+            let col = '#00ffc8', label = t('phase') + '  ' + this.activeStep;
+            if (this.activeStep === 2) col = '#ff5050';
+            else if (this.activeStep === 3) col = '#ff8c00';
+            else if (this.activeStep === 4) { col = '#ff0064'; label = t('crazy_title'); }
             this.phaseOverlay.setVisible(true).setFillStyle(0x000000, 170 / 255 * alpha);
-            this.phaseText.setVisible(true).setText(t('phase') + '  ' + this.activeStep).setColor(col).setAlpha(alpha);
+            this.phaseText.setVisible(true).setText(label).setColor(col).setAlpha(alpha);
         } else { this.phaseOverlay.setVisible(false); this.phaseText.setVisible(false); }
 
-        // Подсказка зачистки
-        if ((this.gamePhase === GamePhase.CLEARING || (this.gamePhase === GamePhase.PHASE_2 && this.phase2BossSpawned)) && !this.isGameOver) {
-            this.clearText.setVisible(true).setText(t('clear_all') + '  [' + this.enemies.length + ']');
+        // Подсказка: зачистка / уход в портал (безумный этап)
+        if (this.crazyMode && !this.isGameOver) {
+            const blink = 0.6 + 0.4 * Math.sin(this.globalTime * 6);
+            this.clearText.setVisible(true).setText(t('crazy_hint'))
+                .setColor('#00e6ff').setAlpha(blink);
+        } else if ((this.gamePhase === GamePhase.CLEARING || (this.gamePhase === GamePhase.PHASE_2 && this.phase2BossSpawned)) && !this.isGameOver) {
+            this.clearText.setVisible(true).setText(t('clear_all') + '  [' + this.enemies.length + ']').setColor('#ff5050').setAlpha(1);
         } else this.clearText.setVisible(false);
 
         // Предупреждения перед боссом
@@ -1161,14 +1293,22 @@ class MainScene extends Phaser.Scene {
         const g = this.bossArrowFx;
         g.clear();
         if (this.isGameOver) return;
-        let boss = null;
-        for (const e of this.enemies) { if (e.isBoss) { boss = e; break; } }
-        if (!boss) return;
+        // Цель указателя: босс, а в безумном этапе — портал-выход.
+        let tx, ty, col;
+        if (this.crazyMode && this.portal) {
+            tx = this.portal.x; ty = this.portal.y; col = rgb(0, 230, 255);
+        } else {
+            let boss = null;
+            for (const e of this.enemies) { if (e.isBoss) { boss = e; break; } }
+            if (!boss) return;
+            tx = boss.sprite.x; ty = boss.sprite.y;
+            col = boss.isBoss3 ? rgb(0, 230, 255) : boss.isBoss2 ? rgb(200, 0, 255) : rgb(255, 40, 60);
+        }
 
         const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT, margin = 70;
         const view = this.cameras.main.worldView;
-        const sx = boss.sprite.x - view.x, sy = boss.sprite.y - view.y; // позиция босса в координатах экрана
-        if (sx >= margin && sx <= W - margin && sy >= margin && sy <= H - margin) return; // босс на экране — стрелка не нужна
+        const sx = tx - view.x, sy = ty - view.y; // позиция цели в координатах экрана
+        if (sx >= margin && sx <= W - margin && sy >= margin && sy <= H - margin) return; // цель на экране — стрелка не нужна
 
         const cx = W / 2, cy = H / 2;
         const ang = Math.atan2(sy - cy, sx - cx);
@@ -1180,7 +1320,6 @@ class MainScene extends Phaser.Scene {
         if (Math.abs(sin) > 1e-6) scale = Math.min(scale, hh / Math.abs(sin));
         const ax = cx + cos * scale, ay = cy + sin * scale;
 
-        const col = boss.isBoss3 ? rgb(0, 230, 255) : boss.isBoss2 ? rgb(200, 0, 255) : rgb(255, 40, 60);
         const pulse = 0.6 + 0.4 * Math.sin(this.globalTime * 8);
         const size = 24 * (0.92 + 0.12 * Math.sin(this.globalTime * 8));
 

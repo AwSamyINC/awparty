@@ -68,6 +68,8 @@ class EnemySpawner {
                 else { e.hp = e.maxHp = 4; e.damage = 40; }
                 e.speed *= 1.25; // скорость как на этапе 2
                 if (isHardcore) { e.hp *= SPAWN_HARDCORE_HP; e.maxHp *= SPAWN_HARDCORE_HP; }
+                // «Безумный» этап после третьего босса: x5 HP (урон/скорость не трогаем).
+                if (scene.crazyMode) { e.hp *= C.CRAZY_HP_MULT; e.maxHp *= C.CRAZY_HP_MULT; }
                 enemies.push(e);
                 this.spawnTimer = 0;
             }
@@ -78,6 +80,7 @@ class EnemySpawner {
                 g.hp += 2; g.maxHp += 2; g.damage += 20;
                 g.speed *= 1.25; // скорость как на этапе 2
                 if (isHardcore) { g.hp *= SPAWN_HARDCORE_HP; g.maxHp *= SPAWN_HARDCORE_HP; }
+                if (scene.crazyMode) { g.hp *= C.CRAZY_HP_MULT; g.maxHp *= C.CRAZY_HP_MULT; }
                 enemies.push(g);
                 this.goblinSpawnTimer = 0;
             }

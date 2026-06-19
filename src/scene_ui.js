@@ -61,6 +61,7 @@ MainScene.prototype.rebuildMenu = function() {
         else if (st === GameState.NAME_INPUT) this._buildNameInput();
         else if (st === GameState.RENAME_INPUT) this._buildRenameInput();
         else if (st === GameState.CLOUD_RESTORE) this._buildCloudRestore();
+        else if (st === GameState.STAGE_CLEAR) this._buildStageClear();
         else if (st === GameState.PLAYING && this.isGameOver) this._buildGameOver();
     }
 
@@ -153,20 +154,22 @@ MainScene.prototype._buildLeaderboard = function() {
         this._mText(W / 2, 215, '<  ' + (hc ? t('lb_hardcore') : t('lb_normal')) + '  >', 44, hc ? '#ff5050' : '#00ffc8', 0.5, 0.5, '#000', 3);
         const board = this.leaderboards[this.lbView];
         const rowY0 = 300, rowH = 54;
-        const colX = [W * 0.10, W * 0.20, W * 0.58, W * 0.78];
-        const hdrs = [t('lb_col_num'), t('lb_col_name'), t('lb_col_time'), t('lb_col_date')];
-        for (let i = 0; i < 4; i++) this._mText(colX[i], rowY0 - 38, hdrs[i], 26, '#00ffc8', 0, 0);
+        const colX = [W * 0.08, W * 0.16, W * 0.50, W * 0.66, W * 0.80];
+        const hdrs = [t('lb_col_num'), t('lb_col_name'), t('lb_col_score'), t('lb_col_time'), t('lb_col_date')];
+        for (let i = 0; i < 5; i++) this._mText(colX[i], rowY0 - 38, hdrs[i], 26, '#00ffc8', 0, 0);
         for (let i = 0; i < 10; i++) {
             const y = rowY0 + i * rowH;
             const e = board[i];
             const isNew = i === this.leaderboardNewEntryIndex;
-            const col = e.time > 0 ? (isNew ? '#ffd700' : '#dcd7eb') : '#504b5f';
+            const filled = (e.score > 0 || e.time > 0);
+            const col = filled ? (isNew ? '#ffd700' : '#dcd7eb') : '#504b5f';
             this._mText(colX[0], y, '' + (i + 1), 30, col, 0, 0);
-            if (e.time > 0) {
+            if (filled) {
                 this._mText(colX[1], y, e.name, 30, col, 0, 0);
-                this._mText(colX[2], y, formatTime(e.time), 30, col, 0, 0);
+                this._mText(colX[2], y, fmtNum(e.score || 0), 30, col, 0, 0);
+                this._mText(colX[3], y, formatTime(e.time), 30, col, 0, 0);
                 const pad = (n) => (n < 10 ? '0' + n : '' + n);
-                this._mText(colX[3], y, pad(e.day) + '.' + pad(e.month) + '.' + e.year, 30, col, 0, 0);
+                this._mText(colX[4], y, pad(e.day) + '.' + pad(e.month) + '.' + e.year, 30, col, 0, 0);
             } else this._mText(colX[1], y, '---', 30, col, 0, 0);
         }
         this._mText(W / 2, H * 0.86, t('lb_hint_switch'), 30, '#7d78a0', 0.5, 0, '#000', 2);
@@ -247,7 +250,7 @@ MainScene.prototype._buildPause = function() {
             [t('stat_speed'), '' + Math.round(p.speed)],
             [t('stat_crit'), Math.round(p.critChance * 100) + '%'],
             [t('stat_hp'), '' + Math.round(p.maxHp)],
-            [t('stat_armor'), p.armor > 0 ? ('-' + Math.min(90, p.armor * 20) + '%') : '0%'],
+            [t('stat_armor'), Math.min(90, p.armor * 20) + '%'],
             [t('stat_magnet'), p.pickupRadius >= 99999 ? '∞' : ('' + Math.round(p.pickupRadius))],
             [t('stat_dash'), p.hasDashUnlocked ? ('Lv ' + p.dashLevel) : t('build_none')],
         ];
@@ -282,14 +285,15 @@ MainScene.prototype._buildGameOver = function() {
         this._mAdd(this.add.rectangle(0, 0, W, H, 0x1e000a, 225 / 255).setOrigin(0, 0));
         this._mText(W / 2, 90, t('gameover_title'), 96, '#ffffff', 0.5, 0.5, '#ff0033', 4);
 
-        // Сводка: время / уровень / убито / монет за забег.
+        // Сводка: счёт / время / уровень / убито / монет за забег.
         const cells = [
+            [t('summary_score'), fmtNum(this.runScore || 0)],
             [t('summary_time'), formatTime(this.survivalTimer)],
             [t('summary_level'), '' + this.player.level],
             [t('summary_kills'), '' + (this.killCount || 0)],
             [t('summary_coins'), '' + (this.coinsThisRun || 0)],
         ];
-        const colW = 380, startX = W / 2 - (cells.length - 1) * colW / 2;
+        const colW = 340, startX = W / 2 - (cells.length - 1) * colW / 2;
         for (let i = 0; i < cells.length; i++) {
             const x = startX + i * colW;
             this._mText(x, 210, cells[i][0], 28, '#9a93b4', 0.5, 0.5);
@@ -308,11 +312,66 @@ MainScene.prototype._buildGameOver = function() {
         this._mText(W / 2, H - 95, t('gameover_records'), 30, '#00ffc8', 0.5, 0.5);
     }
 
+    // Прямоугольник кнопки «ПЕРЕЙТИ В ХАБ» на экране итогов (для отрисовки и кликов).
+MainScene.prototype._stageClearHubRect = function() {
+        const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT;
+        const w = 540, h = 96;
+        return { x: W / 2 - w / 2, y: H - 150, w, h };
+    }
+
+    // Экран после входа в портал: итоги 3 пройденных этапов + кнопка в хаб.
+MainScene.prototype._buildStageClear = function() {
+        const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT;
+        this._mAdd(this.add.rectangle(0, 0, W, H, 0x06001a, 235 / 255).setOrigin(0, 0));
+        this._mText(W / 2, 70, t('stageclear_title'), 92, '#00e6ff', 0.5, 0.5, '#c800ff', 4);
+        this._mText(W / 2, 138, t('stageclear_sub'), 30, '#bfb8e0', 0.5, 0.5, '#000', 2);
+
+        // Таблица: строка-заголовок + 3 этапа + ИТОГО (счёт — приоритетная метрика).
+        const cols = ['', t('summary_score'), t('summary_time'), t('summary_kills'), t('summary_coins')];
+        const colX = [W / 2 - 560, W / 2 - 230, W / 2 + 20, W / 2 + 260, W / 2 + 480];
+        let y = 210;
+        for (let c = 0; c < 5; c++) this._mText(colX[c], y, cols[c], 28, '#7d78a0', 0.5, 0.5);
+        y += 50;
+
+        const tot = { time: 0, kills: 0, coins: 0, score: 0 };
+        for (let i = 0; i < 3; i++) {
+            const s = this.stageStats[i] || { time: 0, kills: 0, coins: 0, score: 0 };
+            tot.time += s.time; tot.kills += s.kills; tot.coins += s.coins; tot.score += (s.score || 0);
+            this._mText(colX[0], y, t('stageclear_stage') + ' ' + (i + 1), 38, '#00ffc8', 0.5, 0.5, '#000', 2);
+            this._mText(colX[1], y, fmtNum(s.score || 0), 40, '#00e6ff', 0.5, 0.5, '#000', 2);
+            this._mText(colX[2], y, formatTime(s.time), 40, '#ffffff', 0.5, 0.5, '#000', 2);
+            this._mText(colX[3], y, '' + s.kills, 40, '#ffffff', 0.5, 0.5, '#000', 2);
+            this._mText(colX[4], y, '' + s.coins, 40, '#ffd700', 0.5, 0.5, '#3a2a00', 2);
+            y += 56;
+        }
+        // Разделитель + ИТОГО.
+        this._mAdd(this.add.rectangle(W / 2, y - 6, 1280, 2, 0x3a3060, 1).setOrigin(0.5, 0.5));
+        y += 30;
+        this._mText(colX[0], y, t('stageclear_total'), 38, '#ff64c8', 0.5, 0.5, '#000', 2);
+        this._mText(colX[1], y, fmtNum(tot.score), 42, '#00e6ff', 0.5, 0.5, '#000', 2);
+        this._mText(colX[2], y, formatTime(tot.time), 42, '#ffffff', 0.5, 0.5, '#000', 2);
+        this._mText(colX[3], y, '' + tot.kills, 42, '#ffffff', 0.5, 0.5, '#000', 2);
+        this._mText(colX[4], y, '' + tot.coins, 42, '#ffd700', 0.5, 0.5, '#3a2a00', 2);
+
+        // Билд забега.
+        this._mText(W / 2, y + 70, t('pause_build'), 28, '#00ffc8', 0.5, 0, '#000', 2);
+        let by = y + 112;
+        by = this._buildIconRow(t('build_cards'), W / 2, by, this._runCards());
+        by = this._buildIconRow(t('build_abilities'), W / 2, by, this._runAbilities());
+        by = this._buildIconRow(t('build_artifacts'), W / 2, by, this._runArtifacts());
+
+        // Кнопка «ПЕРЕЙТИ В ХАБ».
+        const r = this._stageClearHubRect();
+        this._mAdd(this.add.rectangle(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h, 0x14003c, 1)
+            .setOrigin(0.5, 0.5).setStrokeStyle(3, 0x00e6ff));
+        this._mText(r.x + r.w / 2, r.y + r.h / 2, t('stageclear_hub'), 44, '#ffffff', 0.5, 0.5, '#c800ff', 3);
+    }
+
 MainScene.prototype._buildNameInput = function() {
         const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT;
         this._mAdd(this.add.rectangle(0, 0, W, H, 0x0a001e, 230 / 255).setOrigin(0, 0));
         this._mText(W / 2, H * 0.22, t('name_new_record'), 110, '#ffd700', 0.5, 0.5, '#b40050', 5);
-        this._mText(W / 2, H * 0.36, t('name_time') + '  ' + formatTime(this.survivalTimer), 46, '#00ffc8', 0.5, 0.5, '#000', 3);
+        this._mText(W / 2, H * 0.36, t('name_score') + '  ' + fmtNum(this.runScore) + '    ' + t('name_time') + '  ' + formatTime(this.survivalTimer), 46, '#00ffc8', 0.5, 0.5, '#000', 3);
         this._mText(W / 2, H * 0.48, t('name_enter'), 38, '#dcd7eb', 0.5, 0.5, '#000', 2);
 
         // Поле ввода + текст с курсором-подчёркиванием.
@@ -501,6 +560,9 @@ MainScene.prototype.onPointerDown = function(p) {
             for (let i = 0; i < 3; i++) if (hit(W / 2 - 250, H / 2 + 50 + i * 100 - 40, 500, 80)) { this.selectedPauseIndex = i; this._pauseActivate(); return; }
         } else if (st === GameState.LOBBY) {
             for (let i = 0; i < 3; i++) if (hit(W * 0.7 - 250, H * 0.45 + i * 110 - 40, 500, 80)) { this.selectedLobbyIndex = i; this._lobbyActivate(); return; }
+        } else if (st === GameState.STAGE_CLEAR) {
+            const r = this._stageClearHubRect();
+            if (hit(r.x, r.y, r.w, r.h)) this._stageClearToHub();
         } else if (st === GameState.SHOP) {
             const r = this.shop.handleClick(x, y);
             if (r === 'back') { this.audio.play('sfx_menu_click'); this.saveGame(); this.setState(GameState.LOBBY); }
@@ -528,6 +590,12 @@ MainScene.prototype._chooseAbility = function(id) {
         }
         this.pendingAbilityCount = 0;
         this.setState(GameState.PLAYING);
+    }
+
+MainScene.prototype._stageClearToHub = function() {
+        this.audio.play('sfx_menu_click');
+        this.saveGame();
+        this.setState(GameState.LOBBY);
     }
 
 MainScene.prototype._menuActivate = function() {
@@ -609,16 +677,16 @@ MainScene.prototype._applyLocalRename = function(oldName, newName) {
             const src = this.leaderboards[mode] || [];
             const merged = []; // лучшая запись на имя
             for (const raw of src) {
-                if (!raw || raw.time <= 0) continue;
+                if (!raw || (raw.score <= 0 && raw.time <= 0)) continue;
                 const e = Object.assign({}, raw);
                 if (e.name === oldName) e.name = newName;
                 const j = merged.findIndex(m => m.name === e.name);
                 if (j === -1) merged.push(e);
-                else if (e.time > merged[j].time) merged[j] = e;
+                else if (lbCompare(e, merged[j]) < 0) merged[j] = e;
             }
-            merged.sort((a, b) => b.time - a.time);
+            merged.sort(lbCompare);
             const list = merged.slice(0, 10);
-            while (list.length < 10) list.push({ name: '', time: 0, day: 0, month: 0, year: 0 });
+            while (list.length < 10) list.push(lbEmptyEntry());
             this.leaderboards[mode] = list;
             SaveSystem.saveLeaderboard(list, mode === 'hardcore');
         }
@@ -765,6 +833,8 @@ MainScene.prototype.onKeyDown = function(e) {
                 const cc = e.key.charCodeAt(0);
                 if (cc >= 32 && cc !== 127 && this.cloudInput.length < 20) { this.cloudInput += e.key; this._cloudError = ''; this._cloudMsg = ''; this.rebuildMenu(); }
             }
+        } else if (st === GameState.STAGE_CLEAR) {
+            if (enter || esc) this._stageClearToHub();
         } else if (st === GameState.PLAYING) {
             if (this.isGameOver) {
                 if (code === 'KeyR') { this.saveGame(); this.resetGame(); this.rebuildMenu(); }

@@ -10,7 +10,7 @@ MainScene.prototype.onPlayerDeath = function() {
         this.isGameOver = true;
         this.audio.play('sfx_player_death', { volume: 0.9 });
         this.saveGame();
-        if (this.qualifiesForLeaderboard(this.survivalTimer, this._runMode())) {
+        if (this.qualifiesForLeaderboard(this.runScore, this.survivalTimer, this._runMode())) {
             if (this.save.playerName) {
                 // Ник уже задан — молча отправляем лучший результат, показываем Game Over.
                 this._submitScore(this.save.playerName, false);
@@ -31,9 +31,9 @@ MainScene.prototype._submitScore = function(name, showBoard) {
         name = (name || '').trim() || 'Anonymous';
         if (name !== 'Anonymous') { this.save.playerName = name; this.saveGame(); } // запоминаем ник
         const mode = this._runMode();
-        this.tryAddToLeaderboard(this.survivalTimer, name, mode); // локальный кэш/фолбэк (дедуп по имени)
-        // Общий рейтинг: одна запись на игрока в этом режиме, хранит лучшее время.
-        RemoteLeaderboard.submit(name, this.survivalTimer, mode, () => {
+        this.tryAddToLeaderboard(this.runScore, this.survivalTimer, name, mode); // локальный кэш/фолбэк (дедуп по имени)
+        // Общий рейтинг: одна запись на игрока в этом режиме, хранит лучший результат (очки, потом время).
+        RemoteLeaderboard.submit(name, this.runScore, this.survivalTimer, mode, () => {
             if (showBoard && this.currentState === GameState.LEADERBOARD) this._refreshRemoteLeaderboard(mode);
         });
         if (showBoard) {
@@ -58,6 +58,13 @@ MainScene.prototype._confirmNameInput = function() {
                 if (this.currentState === GameState.NAME_INPUT) this.rebuildMenu();
                 return;
             }
+            // Ник из портала: тихо записываем результат и возвращаемся к итогам 3 этапов.
+            if (this._stageClearAfterName) {
+                this._stageClearAfterName = false;
+                this._submitScore(typed, false);
+                this.setState(GameState.STAGE_CLEAR);
+                return;
+            }
             this._submitScore(typed, true);
         });
     }
@@ -70,7 +77,7 @@ MainScene.prototype._refreshRemoteLeaderboard = function(mode) {
         RemoteLeaderboard.fetchTop(10, mode, (rows) => {
             if (!rows) return; // ошибка/оффлайн — оставляем локальную таблицу
             const lb = [];
-            for (let i = 0; i < 10; i++) lb.push(rows[i] || { name: '', time: 0, day: 0, month: 0, year: 0 });
+            for (let i = 0; i < 10; i++) lb.push(rows[i] || lbEmptyEntry());
             this.leaderboards[mode] = lb;
             if (this.lbView === mode) {
                 this.leaderboardNewEntryIndex = -1;
@@ -94,27 +101,33 @@ MainScene.prototype._setLbView = function(mode) {
         if (this.currentState === GameState.LEADERBOARD) this.rebuildMenu();
     }
 
-MainScene.prototype.qualifiesForLeaderboard = function(time, mode) {
+    // Проходит ли результат (score, при равенстве — time) в топ-10 режима.
+MainScene.prototype.qualifiesForLeaderboard = function(score, time, mode) {
         const lb = this.leaderboards[mode || 'normal'];
-        for (let i = 0; i < 10; i++) if (lb[i].time === 0 || time > lb[i].time) return true;
+        const cand = { score, time };
+        for (let i = 0; i < 10; i++) {
+            const e = lb[i];
+            if (e.score === 0 && e.time === 0) return true;       // есть свободный слот
+            if (lbCompare(cand, e) < 0) return true;              // лучше какой-то записи
+        }
         return false;
     }
-MainScene.prototype.tryAddToLeaderboard = function(time, name, mode) {
+MainScene.prototype.tryAddToLeaderboard = function(score, time, name, mode) {
         mode = mode || 'normal';
         let n = name || 'Anonymous';
         if (n.length > 23) n = n.slice(0, 23);
         const d = new Date();
-        const entry = { name: n, time, day: d.getDate(), month: d.getMonth() + 1, year: d.getFullYear() };
+        const entry = { name: n, score, time, day: d.getDate(), month: d.getMonth() + 1, year: d.getFullYear() };
         // Действующие записи без пустышек.
-        let list = this.leaderboards[mode].filter(e => e.time > 0);
-        // Одна запись на игрока — оставляем лучшее время.
+        let list = this.leaderboards[mode].filter(e => e.score > 0 || e.time > 0);
+        // Одна запись на игрока — оставляем лучший результат (очки, потом время).
         const existing = list.find(e => e.name === n);
         if (!existing) list.push(entry);
-        else if (time > existing.time) { list = list.filter(e => e.name !== n); list.push(entry); }
-        list.sort((a, b) => b.time - a.time);
+        else if (lbCompare(entry, existing) < 0) { list = list.filter(e => e.name !== n); list.push(entry); }
+        list.sort(lbCompare);
         list = list.slice(0, 10);
         if (this.lbView === mode) this.leaderboardNewEntryIndex = list.findIndex(e => e.name === n);
-        while (list.length < 10) list.push({ name: '', time: 0, day: 0, month: 0, year: 0 });
+        while (list.length < 10) list.push(lbEmptyEntry());
         this.leaderboards[mode] = list;
         SaveSystem.saveLeaderboard(list, mode === 'hardcore');
     }

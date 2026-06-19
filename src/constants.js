@@ -62,6 +62,25 @@ const C = {
     // Множитель монет в hardcore-режиме (награда за повышенную сложность).
     HARDCORE_COIN_MULT: 1.5,
 
+    // Очки за убийство (счёт забега → рекорды). Боссы дают существенно больше.
+    // В безумном этапе очки не начисляются (см. crazyMode) — защита от фарма.
+    SCORE: {
+        NORMAL: 10,
+        FAST: 15,
+        TANK: 20,
+        GOBLIN: 50,
+        BOSS1: 500,
+        BOSS2: 1000,
+        BOSS3: 2000,
+    },
+
+    // «Безумный» этап после убийства третьего босса: у всех мобов x5 HP (урон/скорость
+    // не трогаем), монеты больше не выпадают (защита от гринда), сверху по центру карты
+    // открывается портал — единственный выход на следующий уровень.
+    CRAZY_HP_MULT: 5,
+    PORTAL_TOP_MARGIN: 280,  // отступ портала от верхнего края арены
+    PORTAL_RADIUS: 140,      // радиус срабатывания входа в портал
+
     // Asset base path (assets live in the repo root so it's self-contained)
     ASSET_PATH: 'assets/',
 };
@@ -80,6 +99,7 @@ const GameState = {
     RENAME_INPUT: 'RENAME_INPUT',
     LEADERBOARD: 'LEADERBOARD',
     CLOUD_RESTORE: 'CLOUD_RESTORE', // ввод ника для восстановления прогресса из облака
+    STAGE_CLEAR: 'STAGE_CLEAR',     // итоги 3 этапов после входа в портал (кнопка «в хаб»)
 };
 
 // GamePhase enum (Game.h)
@@ -145,6 +165,7 @@ const TEXTURE_MANIFEST = [
     ['weaponEnemyV', 'WeaponEnemyV.png'],
     ['boss2', 'boss2.png'],
     ['boss3', 'boss3.png'],
+    ['portal', 'portal.png'],
     ['ability_laser', 'laser.png'],
     ['gem', 'gem.png'],
     ['boss_soul', 'boss_soul.png'],

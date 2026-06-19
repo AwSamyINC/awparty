@@ -3,8 +3,10 @@
 // Поля и значения по умолчанию совпадают с C++.
 
 const SAVE_KEY = 'awparty_save';
-const LB_KEY = 'awparty_leaderboard';        // обычный режим
-const LB_KEY_HC = 'awparty_leaderboard_hc';  // hardcore
+// v2 — рекорды теперь по очкам (score), а не по времени. Новый ключ, чтобы старые
+// time-записи не подмешивались к новым score-записям.
+const LB_KEY = 'awparty_leaderboard_v2';        // обычный режим
+const LB_KEY_HC = 'awparty_leaderboard_hc_v2';  // hardcore
 
 const SaveSystem = {
     // Значения по умолчанию из Game::loadGameData
@@ -149,12 +151,12 @@ const SaveSystem = {
         return true;
     },
 
-    // Таблица рекордов: массив из 10 записей { name, time, day, month, year }.
+    // Таблица рекордов: массив из 10 записей { name, score, time, day, month, year }.
     // hardcore=true — отдельная таблица для хард-режима.
     loadLeaderboard(hardcore) {
         const key = hardcore ? LB_KEY_HC : LB_KEY;
         const empty = [];
-        for (let i = 0; i < 10; i++) empty.push({ name: '', time: 0, day: 0, month: 0, year: 0 });
+        for (let i = 0; i < 10; i++) empty.push(lbEmptyEntry());
         let raw = null;
         try { raw = localStorage.getItem(key); } catch (e) { raw = null; }
         if (!raw) return empty;

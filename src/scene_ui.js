@@ -47,6 +47,7 @@ MainScene.prototype.rebuildMenu = function() {
             this.clearText.setVisible(false);
             this.warnRect.setVisible(false);
             this.upgradeMsg.setVisible(false);
+            if (this.bossArrowFx) this.bossArrowFx.clear();
         }
 
         if (st === GameState.MENU) this._buildMenuScreen();

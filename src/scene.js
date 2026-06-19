@@ -262,6 +262,9 @@ class MainScene extends Phaser.Scene {
         // Сообщение об апгрейде над игроком (world space)
         this.upgradeMsg = this.addWorld(this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '40px', color: '#ffff00', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 0.5)).setDepth(20);
         this.upgradeMsg.setVisible(false);
+        // Стрелка-индикатор направления на босса (когда он за пределами экрана). UI-слой.
+        this.bossArrowFx = this.addUI(this.add.graphics());
+        this.bossArrowFx.setDepth(93);
         // Группа GAME OVER / PAUSE / LEVEL_UP / ABILITY строится динамически в menuObjs
         [this.fadeRect, this.warnRect, this.phaseOverlay, this.phaseText, this.clearText].forEach(o => o.setVisible(false));
     }
@@ -1148,6 +1151,53 @@ class MainScene extends Phaser.Scene {
         if (warnA > 0) {
             if (!this._warnSound) this._warnSound = this.audio.playLoopSfx('sfx_boss_warning', { volume: 0.8 });
         } else if (this._warnSound) { this.audio.releaseLoopSfx(this._warnSound); this._warnSound = null; }
+
+        this._drawBossArrow();
+    }
+
+    // Стрелка-индикатор направления на босса, когда он за пределами видимой области.
+    // Прижата к краю экрана (на отступе margin) в стороне босса, цвет — по типу босса.
+    _drawBossArrow() {
+        const g = this.bossArrowFx;
+        g.clear();
+        if (this.isGameOver) return;
+        let boss = null;
+        for (const e of this.enemies) { if (e.isBoss) { boss = e; break; } }
+        if (!boss) return;
+
+        const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT, margin = 70;
+        const view = this.cameras.main.worldView;
+        const sx = boss.sprite.x - view.x, sy = boss.sprite.y - view.y; // позиция босса в координатах экрана
+        if (sx >= margin && sx <= W - margin && sy >= margin && sy <= H - margin) return; // босс на экране — стрелка не нужна
+
+        const cx = W / 2, cy = H / 2;
+        const ang = Math.atan2(sy - cy, sx - cx);
+        const cos = Math.cos(ang), sin = Math.sin(ang);
+        // точка на прямоугольнике-рамке (экран минус margin) в направлении босса
+        const hw = W / 2 - margin, hh = H / 2 - margin;
+        let scale = Infinity;
+        if (Math.abs(cos) > 1e-6) scale = Math.min(scale, hw / Math.abs(cos));
+        if (Math.abs(sin) > 1e-6) scale = Math.min(scale, hh / Math.abs(sin));
+        const ax = cx + cos * scale, ay = cy + sin * scale;
+
+        const col = boss.isBoss3 ? rgb(0, 230, 255) : boss.isBoss2 ? rgb(200, 0, 255) : rgb(255, 40, 60);
+        const pulse = 0.6 + 0.4 * Math.sin(this.globalTime * 8);
+        const size = 24 * (0.92 + 0.12 * Math.sin(this.globalTime * 8));
+
+        // треугольник: остриё в сторону босса (наружу), основание — позади
+        const perp = ang + Math.PI / 2;
+        const tip = { x: ax + cos * size, y: ay + sin * size };
+        const bcx = ax - cos * size * 0.5, bcy = ay - sin * size * 0.5;
+        const halfW = size * 0.72;
+        const b1 = { x: bcx + Math.cos(perp) * halfW, y: bcy + Math.sin(perp) * halfW };
+        const b2 = { x: bcx - Math.cos(perp) * halfW, y: bcy - Math.sin(perp) * halfW };
+
+        g.fillStyle(col, 0.25 * pulse);
+        g.fillCircle(ax, ay, size * 1.6); // свечение
+        g.fillStyle(col, 0.95);
+        g.beginPath(); g.moveTo(tip.x, tip.y); g.lineTo(b1.x, b1.y); g.lineTo(b2.x, b2.y); g.closePath(); g.fillPath();
+        g.lineStyle(2, 0xffffff, 0.85 * pulse);
+        g.beginPath(); g.moveTo(tip.x, tip.y); g.lineTo(b1.x, b1.y); g.lineTo(b2.x, b2.y); g.closePath(); g.strokePath();
     }
 
     // ===================== АНИМАЦИЯ LEVEL UP =====================

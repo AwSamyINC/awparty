@@ -200,6 +200,66 @@ class MainScene extends Phaser.Scene {
         e.hp = Math.round(e.hp * ch.bossHpMult); e.maxHp = Math.round(e.maxHp * ch.bossHpMult);
         e.damage = Math.round(e.damage * ch.dmgMult);
     }
+
+    // Аура Хайпмена: врагам в радиусе даёт бонус к макс. HP (флэт, снимается при выходе)
+    // и лечит их со временем. Toggle на вход/выход — без накопления/дрейфа.
+    _updateHypeAuras(dt) {
+        let auras = null;
+        for (const e of this.enemies) {
+            if (e.type === EnemyType.HYPEMAN && e.hp > 0) (auras || (auras = [])).push(e);
+        }
+        const H = C.HYPEMAN, r2 = H.AURA_RADIUS * H.AURA_RADIUS;
+        for (const e of this.enemies) {
+            if (e.isBoss || e.type === EnemyType.HYPEMAN || e.hp <= 0) continue;
+            let inside = false;
+            if (auras) {
+                for (const h of auras) {
+                    if (distSq(e.sprite.x, e.sprite.y, h.sprite.x, h.sprite.y) <= r2) { inside = true; break; }
+                }
+            }
+            if (inside && !e.hyped) {
+                e.hyped = true; e.maxHp += H.HP_BONUS; e.hp += H.HP_BONUS;
+            } else if (!inside && e.hyped) {
+                e.hyped = false; e.maxHp -= H.HP_BONUS; if (e.hp > e.maxHp) e.hp = e.maxHp;
+            }
+            if (e.hyped && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + H.REGEN * dt);
+        }
+    }
+
+    // Событие «окружение»: раз за боевой этап в случайный момент вокруг игрока по кольцу
+    // спавнятся обычные мобы со всех краёв и сжимаются к нему (двигаются как чейзеры).
+    _updateEncircleEvent(dt) {
+        if (this.crazyMode || !this.chapter || !this.chapter.encircleEvent) return; // только главы с encircleEvent
+        let ph = 0;
+        if (this.gamePhase === GamePhase.PHASE_1) ph = 1;
+        else if (this.gamePhase === GamePhase.PHASE_2) ph = 2;
+        else if (this.gamePhase === GamePhase.PHASE_3) ph = 3;
+        else return; // CLEARING и прочее — пропускаем
+        if (ph !== this._encPhase) {
+            // Новый этап — планируем событие на случайный момент (12..37с после начала).
+            this._encPhase = ph; this._encTimer = 0; this._encDone = false;
+            this._encAt = 12 + Math.random() * 25;
+        }
+        if (this._encDone) return;
+        this._encTimer += dt;
+        if (this._encTimer >= this._encAt) { this._encDone = true; this._spawnEncircle(); }
+    }
+
+    _spawnEncircle() {
+        const px = this.player.sprite.x, py = this.player.sprite.y;
+        const R = 1150, count = 36; // кольцо за пределами видимости; по мере сближения уплотняется
+        for (let i = 0; i < count; i++) {
+            const ang = (i / count) * Math.PI * 2;
+            const x = clamp(px + Math.cos(ang) * R, 40, C.ARENA_WIDTH - 40);
+            const y = clamp(py + Math.sin(ang) * R, 40, C.ARENA_HEIGHT - 40);
+            const e = new Enemy(this, x, y, this._enemyKey);
+            e.hp = 3; e.maxHp = 3; // обычные, чуть живучее — чтобы кольцо держалось
+            this._applyChapterEnemy(e);
+            this.enemies.push(e);
+        }
+        this.audio.play('sfx_boss_warning', { volume: 0.6 });
+        this.triggerShake(0.3, 30);
+    }
     saveGame() { SaveSystem.save(this.save); this._scheduleCloudBackup(); }
 
     // Авто-бэкап мета-прогресса в облако (если задан ник). Дебаунс: серия сохранений
@@ -331,6 +391,7 @@ class MainScene extends Phaser.Scene {
         this.survivalTimer = 0; this.vinylSpawnTimer = 0; this.phase2BossSpawned = false; this.phase3BossSpawned = false;
         this.gamePhase = GamePhase.PHASE_1; this.phaseNotifTimer = 0; this.activeStep = 1;
         this.phase2Timer = 0; this.phase3Timer = 0; this.phaseTransitionTimer = -1; this.phaseEventFired = false;
+        this._encPhase = 0; this._encTimer = 0; this._encAt = 0; this._encDone = false; // событие «окружение» (раз за этап)
 
         // Контент текущей главы: пол + резолв ключей спрайтов (с фолбэком на главу 1).
         this.chapter = getChapter(this.currentChapter);
@@ -342,6 +403,7 @@ class MainScene extends Phaser.Scene {
         // Сабвуфер: ключ только если глава его поддерживает (иначе null — не спавнится).
         this._subwooferKey = this.chapter.subwooferKey ? this._tex(this.chapter.subwooferKey, this._enemyKey) : null;
         this._mosherKey = this.chapter.mosherKey ? this._tex(this.chapter.mosherKey, this._enemyKey) : null;
+        this._hypemanKey = this.chapter.hypemanKey ? this._tex(this.chapter.hypemanKey, this._enemyKey) : null;
         // Пол: своя текстура, если есть; иначе 'floor' перекрашиваем тинтом главы.
         const fk = this._tex(this.chapter.floorKey, 'floor');
         const usingOwnFloor = (fk === this.chapter.floorKey);
@@ -510,6 +572,9 @@ class MainScene extends Phaser.Scene {
         this.survivalTimer += dt;
         if (this.phaseNotifTimer < 3.5) this.phaseNotifTimer += dt;
 
+        // Событие «окружение» (раз за этап, в случайный момент)
+        this._updateEncircleEvent(dt);
+
         // Реген
         if (s.permRegen > 0 && p.hp < p.maxHp) {
             this.regenTimer += dt;
@@ -626,6 +691,9 @@ class MainScene extends Phaser.Scene {
         }
 
         for (const b of this.bullets) b.update(dt);
+
+        // Аура Хайпмена: +HP/реген союзникам в радиусе (до обновления врагов).
+        this._updateHypeAuras(dt);
 
         // Враги + снаряды/коллизии
         for (const e of this.enemies) {
@@ -1034,6 +1102,7 @@ class MainScene extends Phaser.Scene {
         if (e.type === EnemyType.SUBWOOFER) return S.SUBWOOFER;
         if (e.type === EnemyType.MOSHER) return S.MOSHER;
         if (e.type === EnemyType.MOSHERLING) return S.MOSHERLING;
+        if (e.type === EnemyType.HYPEMAN) return S.HYPEMAN;
         if (e.type === EnemyType.FAST) return S.FAST;
         if (e.type === EnemyType.TANK) return S.TANK;
         return S.NORMAL;
@@ -1267,6 +1336,16 @@ class MainScene extends Phaser.Scene {
             g.beginPath(); g.arc(w.x, w.y, w.radius, a0, a1, false); g.strokePath();
             g.lineStyle(4, rgb(180, 245, 255), 0.85 * alpha);
             g.beginPath(); g.arc(w.x, w.y, Math.max(0, w.radius - 8), a0, a1, false); g.strokePath();
+        }
+        // Аура Хайпмена: пульсирующее золотое кольцо (зона лечения союзников).
+        for (const e of this.enemies) {
+            if (e.type !== EnemyType.HYPEMAN || e.hp <= 0) continue;
+            const pulse = (Math.sin(this.globalTime * 3) + 1) / 2;
+            const rr = C.HYPEMAN.AURA_RADIUS;
+            g.fillStyle(rgb(255, 200, 40), 0.06 + 0.04 * pulse);
+            g.fillCircle(e.sprite.x, e.sprite.y, rr);
+            g.lineStyle(3, rgb(255, 210, 60), 0.4 + 0.25 * pulse);
+            g.strokeCircle(e.sprite.x, e.sprite.y, rr);
         }
         // Лазер игрока (способность LASER): затухающий пробивающий луч
         if (this.playerBeam) {

@@ -399,6 +399,15 @@ class Enemy {
         this.splitOnDeath = false;
     }
 
+    // Хайпмен (глава 2+): убегает от игрока, сам почти не бьёт. Ауру (+HP/реген союзникам)
+    // считает сцена (_updateHypeAuras). Движение — собственная ветка «бегство».
+    makeHypeman(texKey) {
+        this.type = EnemyType.HYPEMAN;
+        if (texKey) { this.sprite.setTexture(texKey); this.sprite.setOrigin(0.5, 0.5); }
+        this._setTargetSize(130);
+        this.hp = 12; this.maxHp = 12; this.speed = 120; this.damage = 10;
+    }
+
     makeBoss() {
         this.isBoss = true;
         this.type = EnemyType.BOSS;
@@ -561,7 +570,7 @@ class Enemy {
     update(dt, px, py, arenaW, arenaH) {
         const s = this.sprite;
 
-        if (this.type !== EnemyType.BOSS && this.type !== EnemyType.GOBLIN && this.type !== EnemyType.SUBWOOFER) {
+        if (this.type !== EnemyType.BOSS && this.type !== EnemyType.GOBLIN && this.type !== EnemyType.SUBWOOFER && this.type !== EnemyType.HYPEMAN) {
             const dir = normalize(px - s.x, py - s.y);
             s.x += dir.x * this.speed * dt;
             s.y += dir.y * this.speed * dt;
@@ -653,6 +662,16 @@ class Enemy {
                 s.setScale(base * (1.3 - 0.3 * rec), base * (1.3 - 0.3 * rec));
                 if (this.subTimer >= 0.45) { this.subState = 'MOVE'; this.subTimer = 0; s.setScale(base, base); }
             }
+        } else if (this.type === EnemyType.HYPEMAN) {
+            // Бегство: если игрок ближе FLEE_DIST — уходит от него; иначе держится на месте.
+            const dx = s.x - px, dy = s.y - py;
+            const d = Math.sqrt(dx * dx + dy * dy) || 1;
+            if (d < C.HYPEMAN.FLEE_DIST) {
+                s.x = clamp(s.x + (dx / d) * this.speed * dt, 0, arenaW);
+                s.y = clamp(s.y + (dy / d) * this.speed * dt, 0, arenaH);
+            }
+            this.walkTimer += dt * 8;
+            s.angle = Math.sin(this.walkTimer) * 6; // покачивание «в такт»
         }
 
         if (this.type === EnemyType.GOBLIN) {
@@ -772,6 +791,9 @@ class Enemy {
             } else if (this.type === EnemyType.MOSHER || this.type === EnemyType.MOSHERLING) {
                 const pulse = (Math.sin(this.walkTimer * 1.5) + 1) / 2;
                 s.setTint(rgb(255, 40 + 80 * pulse, 180 + 60 * pulse)); // неон-маджента «толпа»
+            } else if (this.type === EnemyType.HYPEMAN) {
+                const pulse = (Math.sin(this.walkTimer * 2) + 1) / 2;
+                s.setTint(rgb(255, 200 + 55 * pulse, 40)); // золотой «MC»
             } else {
                 s.clearTint();
             }

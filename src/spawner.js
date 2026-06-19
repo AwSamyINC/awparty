@@ -41,10 +41,18 @@ class EnemySpawner {
         this.phase1FastCount = 0; // сколько быстрых врагов уже заспавнено в фазе 1 (лимит 7)
         this.subSpawnTimer = 0;   // ритм спавна Сабвуферов (глава 2+); не сбрасывается между фазами
         this.mosherSpawnTimer = 0; // ритм спавна Мошеров (глава 2+)
+        this.hypeSpawnTimer = 0;   // таймер спавна Хайпменов (глава 2+)
+        this.hypeCount = 0;        // сколько Хайпменов уже заспавнено в текущем этапе
+        this.hypePhase = 0;        // этап, обслуживаемый хайп-спавнером (смена → сброс счётчика)
+        this.hypeNextAt = 0;       // случайная задержка до следующего Хайпмена
     }
 
     resetForPhase2() { this.spawnTimer = 0; this.goblinSpawnTimer = 0; }
-    reset() { this.spawnTimer = 0; this.bossSpawned = false; this.goblinSpawnTimer = 0; this.phase1FastCount = 0; this.subSpawnTimer = 0; this.mosherSpawnTimer = 0; }
+    reset() {
+        this.spawnTimer = 0; this.bossSpawned = false; this.goblinSpawnTimer = 0; this.phase1FastCount = 0;
+        this.subSpawnTimer = 0; this.mosherSpawnTimer = 0;
+        this.hypeSpawnTimer = 0; this.hypeCount = 0; this.hypePhase = 0; this.hypeNextAt = 5 + Math.random() * 15;
+    }
 
     // Интервал обычного спавна для этапа step (1,2,3,...): +15% частоты за каждый этап.
     spawnInterval(step, isHardcore) {
@@ -87,6 +95,33 @@ class EnemySpawner {
             if (scene.crazyMode) { mo.hp *= C.CRAZY_HP_MULT; mo.maxHp *= C.CRAZY_HP_MULT; }
             enemies.push(mo);
             this.mosherSpawnTimer = 0;
+        }
+
+        // Хайпмен (глава 2+): за этап сеется фикс. число штук в случайные моменты.
+        // Бюджет по этапам: 1-й → 2, 2-й → 3, 3-й → 4.
+        if (scene._hypemanKey) {
+            const phaseIdx = isPhase3 ? 3 : (isPhase2 ? 2 : 1);
+            if (phaseIdx !== this.hypePhase) {
+                // Новый этап — обнуляем счётчик и планируем первый спавн.
+                this.hypePhase = phaseIdx;
+                this.hypeCount = 0;
+                this.hypeSpawnTimer = 0;
+                this.hypeNextAt = 5 + Math.random() * 15;
+            }
+            const budget = phaseIdx === 3 ? 4 : (phaseIdx === 2 ? 3 : 2);
+            this.hypeSpawnTimer += dt;
+            if (this.hypeCount < budget && this.hypeSpawnTimer >= this.hypeNextAt) {
+                const p = findSpawnPos(px, py, arenaW, arenaH, SPAWN_SAFE_DIST);
+                const hy = new Enemy(scene, p.x, p.y, scene._hypemanKey);
+                hy.makeHypeman(scene._hypemanKey);
+                scene._applyChapterEnemy(hy);
+                if (isHardcore) { hy.hp *= SPAWN_HARDCORE_HP; hy.maxHp *= SPAWN_HARDCORE_HP; }
+                if (scene.crazyMode) { hy.hp *= C.CRAZY_HP_MULT; hy.maxHp *= C.CRAZY_HP_MULT; }
+                enemies.push(hy);
+                this.hypeCount++;
+                this.hypeSpawnTimer = 0;
+                this.hypeNextAt = 6 + Math.random() * 18; // следующий — через 6..24с
+            }
         }
 
         if (isPhase3) {

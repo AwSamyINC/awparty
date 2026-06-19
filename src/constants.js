@@ -56,9 +56,18 @@ const C = {
         WAVE_RADIUS: 340,            // макс. радиус волны, px
         WAVE_HALF_ARC: Math.PI / 4,  // полу-угол сектора (45° → раствор 90°)
         WAVE_EXPAND: 0.32,           // время раскрытия до макс. радиуса, сек
-        WAVE_KNOCKBACK: 322,         // импульс отбрасывания игрока, px (−30% от прежних 460)
+        WAVE_KNOCKBACK: 250,         // импульс отбрасывания игрока, px
         APPROACH_RANGE: 300,         // сближается с игроком до этой дистанции, прежде чем бить
         REARM: 1.5,                  // мин. перезарядка между волнами, сек
+    },
+
+    // Хайпмен: убегает от игрока и излучает ауру поддержки — врагам в радиусе даёт
+    // бонус к макс. HP и реген. Сам почти не атакует. Убьёшь — бонус/реген спадает.
+    HYPEMAN: {
+        AURA_RADIUS: 400,            // радиус ауры, px
+        HP_BONUS: 5,                 // +макс. HP врагам в ауре (флэт, снимается при выходе)
+        REGEN: 3,                    // лечение врагов в ауре, HP/сек
+        FLEE_DIST: 450,              // ближе этой дистанции Хайпмен убегает от игрока
     },
 
     // --- Meta-progression caps (Game.h) ---
@@ -83,6 +92,7 @@ const C = {
         SUBWOOFER: 40,
         MOSHER: 25,
         MOSHERLING: 5,
+        HYPEMAN: 60,
         BOSS1: 500,
         BOSS2: 1000,
         BOSS3: 2000,
@@ -129,6 +139,8 @@ const GameState = {
 //   boss1/2/3Key       — спрайты боссов 3 этапов (фолбэк на ch1, если файла нет).
 //   subwooferKey       — если задан, в главе спавнятся Сабвуферы (волна баса); иначе нет.
 //   mosherKey          — если задан, в главе спавнятся Мошеры (распад на мини при смерти).
+//   hypemanKey         — если задан, в главе спавнятся Хайпмены (аура +HP/реген союзникам).
+//   encircleEvent      — если true, раз за этап срабатывает событие «окружение» (кольцо мобов).
 //   hpMult/dmgMult/spawnMult/bossHpMult — множители сложности относительно главы 1.
 // Все *Key c фолбэком: глава играбельна ДО появления арта (см. _tex в scene.js).
 const CHAPTERS = [
@@ -139,13 +151,13 @@ const CHAPTERS = [
       hpMult: 1, dmgMult: 1, spawnMult: 1, bossHpMult: 1 },
     { id: 2, hue: 0xc800ff,
       floorKey: 'floor2', floorTint: 0x9a6cff, floorMode: 'stretch',
-      enemyKey: 'enemy2', goblinKey: 'enemyV2', subwooferKey: 'enemy2_sub', mosherKey: 'enemy2_mosher',
-      boss1Key: 'c2_boss1', boss2Key: 'c2_boss2', boss3Key: 'c2_boss3',
+      enemyKey: 'enemy2', goblinKey: 'enemyV2', subwooferKey: 'enemy2_sub', mosherKey: 'enemy2_mosher', hypemanKey: 'enemy2_hype',
+      boss1Key: 'c2_boss1', boss2Key: 'c2_boss2', boss3Key: 'c2_boss3', encircleEvent: true,
       hpMult: 1.6, dmgMult: 1.35, spawnMult: 1.2, bossHpMult: 1.8 },
     { id: 3, hue: 0xff5050,
       floorKey: 'floor3', floorTint: 0xff6464, floorMode: 'stretch',
-      enemyKey: 'enemy3', goblinKey: 'enemyV3', subwooferKey: 'enemy3_sub', mosherKey: 'enemy3_mosher',
-      boss1Key: 'c3_boss1', boss2Key: 'c3_boss2', boss3Key: 'c3_boss3',
+      enemyKey: 'enemy3', goblinKey: 'enemyV3', subwooferKey: 'enemy3_sub', mosherKey: 'enemy3_mosher', hypemanKey: 'enemy3_hype',
+      boss1Key: 'c3_boss1', boss2Key: 'c3_boss2', boss3Key: 'c3_boss3', encircleEvent: true,
       hpMult: 2.4, dmgMult: 1.8, spawnMult: 1.4, bossHpMult: 2.6 },
 ];
 function getChapter(id) { return CHAPTERS.find(c => c.id === id) || CHAPTERS[0]; }
@@ -168,6 +180,7 @@ const EnemyType = {
     SUBWOOFER: 'SUBWOOFER', // глава 2+: медленный танк-колонка, бьёт радиальной волной баса
     MOSHER: 'MOSHER',       // глава 2+: чейзер, при смерти распадается на мини-мошеров
     MOSHERLING: 'MOSHERLING', // мелкий быстрый осколок мошера (не делится)
+    HYPEMAN: 'HYPEMAN',       // глава 2+: убегает, баффает соседних врагов аурой
 };
 
 // Boss / Goblin FSM states (Enemy.h)
@@ -224,6 +237,7 @@ const TEXTURE_MANIFEST = [
     ['enemyV2', 'enemyV2.png'],
     ['enemy2_sub', 'enemy2_sub.png'],
     ['enemy2_mosher', 'enemy2_mosher.png'],
+    ['enemy2_hype', 'enemy2_hype.png'],
     ['c2_boss1', 'c2_boss1.png'],
     ['c2_boss2', 'c2_boss2.png'],
     ['c2_boss3', 'c2_boss3.png'],
@@ -232,6 +246,7 @@ const TEXTURE_MANIFEST = [
     ['enemyV3', 'enemyV3.png'],
     ['enemy3_sub', 'enemy3_sub.png'],
     ['enemy3_mosher', 'enemy3_mosher.png'],
+    ['enemy3_hype', 'enemy3_hype.png'],
     ['c3_boss1', 'c3_boss1.png'],
     ['c3_boss2', 'c3_boss2.png'],
     ['c3_boss3', 'c3_boss3.png'],

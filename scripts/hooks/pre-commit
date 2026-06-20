@@ -1,0 +1,13 @@
+#!/bin/sh
+# Авто-бамп ASSET_VER в index.html, если в коммит попали изменения src/*.js.
+# Это решает «ручной ASSET_VER»: кэш на GitHub Pages бустится автоматически,
+# больше не нужно помнить про бамп после правки модулей.
+if git diff --cached --name-only | grep -qE '^src/.*\.js$'; then
+    cur=$(grep -oE "ASSET_VER = '[0-9]+'" index.html | grep -oE '[0-9]+' | head -n1)
+    if [ -n "$cur" ]; then
+        next=$((cur + 1))
+        sed -i "s/ASSET_VER = '$cur'/ASSET_VER = '$next'/" index.html
+        git add index.html
+        echo "pre-commit: ASSET_VER $cur -> $next (src/*.js changed)"
+    fi
+fi

@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm install
+      - name: Lint (ESLint — no-undef across the global soup)
+        run: npm run lint
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Smoke test (game boots to MENU)
+        run: npm test

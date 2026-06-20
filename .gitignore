@@ -5,6 +5,12 @@
 # ассеты игра берёт оттуда локально. В корневой репозиторий не включаем.
 AwParty/
 
+# Node dev-тулинг (линтер + Playwright smoke-тест). В рантайм игры не входит.
+node_modules/
+test-results/
+playwright-report/
+playwright/.cache/
+
 # ОС / редакторы
 # .vscode: локальная конфигурация редактора (вкл. c_cpp_properties.json с
 # машинно-специфичным путём к SFML для референс-проекта AwParty/). В репозиторий не нужно.

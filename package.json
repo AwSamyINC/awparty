@@ -1,0 +1,18 @@
+{
+  "name": "awparty",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AwParty — browser game (Phaser 3, no bundler). These npm packages are DEV-ONLY (lint + smoke test); the game itself ships as plain static files loaded via <script>.",
+  "scripts": {
+    "serve": "node scripts/serve.js",
+    "lint": "eslint src",
+    "test": "playwright test",
+    "test:install": "playwright install chromium",
+    "prepare": "node scripts/setup-hooks.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "eslint": "^9.17.0",
+    "globals": "^15.14.0"
+  }
+}

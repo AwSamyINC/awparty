@@ -108,7 +108,12 @@ class HUD {
         // в точке (0,0), иконки-заглушки способностей, полоса босса). Их видимость
         // обычно задаётся в update(), который не вызывается в LEVEL_UP/ABILITY_SELECT,
         // поэтому переприменяем корректное состояние сразу при показе.
-        if (v) this._applyConditionalVisibility();
+        if (v) {
+            // Сброс кэша значений: при показе текст перерисуется даже если число не
+            // изменилось (например, после смены языка между забегами).
+            this._lastLevel = this._lastHp = this._lastMaxHp = this._lastCoins = this._lastTimer = undefined;
+            this._applyConditionalVisibility();
+        }
     }
 
     _applyConditionalVisibility() {
@@ -159,21 +164,34 @@ class HUD {
         const W = this.uiW, H = this.uiH;
         this._lastBossExists = bossExists; // для переприменения видимости при show()
 
-        // XP / level
+        // XP / level (бар обновляем всегда, текст — только при смене уровня)
         const xpPct = player.currentXP / player.xpToNextLevel;
         this.xpFill.setSize((W - 100) * clamp(xpPct, 0, 1), 25);
-        this.lvlText.setText(t('hud_lvl') + ' ' + player.level);
+        if (this._lastLevel !== player.level) {
+            this._lastLevel = player.level;
+            this.lvlText.setText(t('hud_lvl') + ' ' + player.level);
+        }
 
-        // HP
+        // HP (бар всегда; текст — только при изменении чисел)
         const hpPct = player.hp / player.maxHp;
         this.hpFill.setSize(400 * Math.max(0, hpPct), 30);
-        this.hpText.setText(t('hud_hp') + ' ' + Math.max(0, player.hp) + ' / ' + player.maxHp);
+        const hpShown = Math.max(0, player.hp);
+        if (this._lastHp !== hpShown || this._lastMaxHp !== player.maxHp) {
+            this._lastHp = hpShown; this._lastMaxHp = player.maxHp;
+            this.hpText.setText(t('hud_hp') + ' ' + hpShown + ' / ' + player.maxHp);
+        }
 
-        // Coins
-        this.coinText.setText('' + totalCoins);
+        // Coins — только при изменении.
+        if (this._lastCoins !== totalCoins) {
+            this._lastCoins = totalCoins;
+            this.coinText.setText('' + totalCoins);
+        }
 
-        // Timer
-        this.timerText.setText(timerStr);
+        // Timer — строка MM:SS меняется раз в секунду, не каждый кадр.
+        if (this._lastTimer !== timerStr) {
+            this._lastTimer = timerStr;
+            this.timerText.setText(timerStr);
+        }
 
         // Boss HP
         if (bossExists) {

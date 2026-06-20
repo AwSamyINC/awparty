@@ -910,7 +910,9 @@ class MainScene extends Phaser.Scene {
         for (const e of this.enemies) {
             if (e.isBoss) {
                 bossExists = true; bossHpPct = Math.max(0, e.hp / e.maxHp);
-                this.hud.bossName.setText(e.isBoss3 ? t('boss3_name') : e.isBoss2 ? t('boss2_name') : t('boss_name'));
+                // setText только при смене имени — текстура текста иначе перегенерируется каждый кадр.
+                const bn = e.isBoss3 ? t('boss3_name') : e.isBoss2 ? t('boss2_name') : t('boss_name');
+                if (this._lastBossName !== bn) { this._lastBossName = bn; this.hud.bossName.setText(bn); }
                 break;
             }
         }
@@ -1263,20 +1265,51 @@ class MainScene extends Phaser.Scene {
         const A = 16 + 10 * (0.5 + 0.5 * Math.sin(tm * 1.6)); // амплитуда + плавный пульс
         const pulse = 0.5 + 0.5 * Math.sin(tm * 3);
         const col = rgb(255, 20 + 80 * pulse, 80 + 60 * pulse); // неон: красный<->розовый
-        const stroke = (pts, width, alpha) => {
+
+        // Базовые координаты вдоль краёв статичны — считаем один раз и переиспользуем
+        // буферы между кадрами. Раньше каждый кадр аллоцировались 4 массива по ~115
+        // объектов {x,y} (~460 объектов/кадр → постоянный GC-мусор на 144/240 Гц).
+        if (!this._wallAxisX || this._wallStep !== step) {
+            this._wallStep = step;
+            const xs = []; for (let x = 0; x <= W; x += step) xs.push(x);
+            const ys = []; for (let y = 0; y <= H; y += step) ys.push(y);
+            this._wallAxisX = xs; this._wallAxisY = ys;
+            this._wallTop = new Float64Array(xs.length);   // осциллирующая y верх/низ
+            this._wallBot = new Float64Array(xs.length);
+            this._wallLeft = new Float64Array(ys.length);  // осциллирующая x лево/право
+            this._wallRight = new Float64Array(ys.length);
+        }
+        const xs = this._wallAxisX, ys = this._wallAxisY;
+        const top = this._wallTop, bot = this._wallBot, left = this._wallLeft, right = this._wallRight;
+        for (let i = 0; i < xs.length; i++) {
+            const x = xs[i];
+            top[i] = 6 + A * (1 + Math.sin(k * x + tm * speed));
+            bot[i] = H - 6 - A * (1 + Math.sin(k * x - tm * speed));
+        }
+        for (let i = 0; i < ys.length; i++) {
+            const y = ys[i];
+            left[i] = 6 + A * (1 + Math.sin(k * y + tm * speed));
+            right[i] = W - 6 - A * (1 + Math.sin(k * y - tm * speed));
+        }
+        // Горизонтальные края (верх/низ): x = xs[i], y = буфер[i].
+        const strokeH = (yb, width, alpha) => {
             g.lineStyle(width, col, alpha);
-            g.beginPath();
-            g.moveTo(pts[0].x, pts[0].y);
-            for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+            g.beginPath(); g.moveTo(xs[0], yb[0]);
+            for (let i = 1; i < xs.length; i++) g.lineTo(xs[i], yb[i]);
             g.strokePath();
         };
-        const edges = [];
-        let pts;
-        pts = []; for (let x = 0; x <= W; x += step) pts.push({ x: x, y: 6 + A * (1 + Math.sin(k * x + tm * speed)) }); edges.push(pts);          // верх
-        pts = []; for (let x = 0; x <= W; x += step) pts.push({ x: x, y: H - 6 - A * (1 + Math.sin(k * x - tm * speed)) }); edges.push(pts);      // низ
-        pts = []; for (let y = 0; y <= H; y += step) pts.push({ x: 6 + A * (1 + Math.sin(k * y + tm * speed)), y: y }); edges.push(pts);          // лево
-        pts = []; for (let y = 0; y <= H; y += step) pts.push({ x: W - 6 - A * (1 + Math.sin(k * y - tm * speed)), y: y }); edges.push(pts);      // право
-        for (const e of edges) { stroke(e, 12, 0.16); stroke(e, 4, 0.9); } // мягкое свечение + яркое ядро
+        // Вертикальные края (лево/право): x = буфер[i], y = ys[i].
+        const strokeV = (xb, width, alpha) => {
+            g.lineStyle(width, col, alpha);
+            g.beginPath(); g.moveTo(xb[0], ys[0]);
+            for (let i = 1; i < ys.length; i++) g.lineTo(xb[i], ys[i]);
+            g.strokePath();
+        };
+        // По два прохода на край: мягкое свечение (12px) + яркое ядро (4px).
+        strokeH(top, 12, 0.16); strokeH(top, 4, 0.9);
+        strokeH(bot, 12, 0.16); strokeH(bot, 4, 0.9);
+        strokeV(left, 12, 0.16); strokeV(left, 4, 0.9);
+        strokeV(right, 12, 0.16); strokeV(right, 4, 0.9);
     }
 
     // ===================== РЕНДЕР МИРА (FX) =====================

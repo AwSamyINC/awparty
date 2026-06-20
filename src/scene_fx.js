@@ -103,14 +103,14 @@ MainScene.prototype.drawWorldFx = function() {
             g.lineStyle(4, rgb(180, 245, 255), 0.85 * alpha);
             g.beginPath(); g.arc(w.x, w.y, Math.max(0, w.radius - 8), a0, a1, false); g.strokePath();
         }
-        // Аура Хайпмена: пульсирующее золотое кольцо (зона лечения союзников).
+        // Аура Хайпмена: пульсирующее зелёное кольцо (зона лечения союзников).
         for (const e of this.enemies) {
             if (e.type !== EnemyType.HYPEMAN || e.hp <= 0) continue;
             const pulse = (Math.sin(this.globalTime * 3) + 1) / 2;
             const rr = C.HYPEMAN.AURA_RADIUS;
-            g.fillStyle(rgb(255, 200, 40), 0.06 + 0.04 * pulse);
+            g.fillStyle(rgb(60, 255, 130), 0.06 + 0.04 * pulse);
             g.fillCircle(e.sprite.x, e.sprite.y, rr);
-            g.lineStyle(3, rgb(255, 210, 60), 0.4 + 0.25 * pulse);
+            g.lineStyle(3, rgb(80, 255, 150), 0.4 + 0.25 * pulse);
             g.strokeCircle(e.sprite.x, e.sprite.y, rr);
         }
         // Лазер игрока (способность LASER): затухающий пробивающий луч

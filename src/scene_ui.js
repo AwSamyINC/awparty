@@ -905,6 +905,8 @@ MainScene.prototype.onKeyDown = function(e) {
         const right = (code === 'KeyD' || code === 'ArrowRight');
         const enter = (code === 'Enter' || code === 'Space');
         const esc = (code === 'Escape');
+        const pauseKey = (code === 'KeyP'); // пауза/возобновление: ESC убран из забега —
+        // браузер по ESC принудительно выходит из фуллскрина (этого JS не отменить).
 
         if (st === GameState.MENU) {
             if (up) { this.selectedMenuIndex = (this.selectedMenuIndex + 2) % 3; this._restyleList(this.selectedMenuIndex); }
@@ -987,13 +989,13 @@ MainScene.prototype.onKeyDown = function(e) {
                 if (code === 'KeyQ') { this.saveGame(); this.setState(GameState.LOBBY); }
                 if (code === 'KeyL') { this.leaderboardFromMenu = false; this._pendingHighlight = null; this.lbView = 'normal'; this.setState(GameState.LEADERBOARD); }
             } else {
-                if (esc) { this.selectedPauseIndex = 0; this.setState(GameState.PAUSED); }
+                if (pauseKey) { this.selectedPauseIndex = 0; this.setState(GameState.PAUSED); }
                 if (code === 'KeyQ') this.activateAbility(0);
                 if (code === 'KeyE') this.activateAbility(1);
                 if (code === 'KeyR') this.activateAbility(2);
             }
         } else if (st === GameState.PAUSED) {
-            if (esc) this.setState(GameState.PLAYING);
+            if (pauseKey) this.setState(GameState.PLAYING);
             if (up) { this.selectedPauseIndex = (this.selectedPauseIndex + 2) % 3; this._restyleList(this.selectedPauseIndex); }
             if (down) { this.selectedPauseIndex = (this.selectedPauseIndex + 1) % 3; this._restyleList(this.selectedPauseIndex); }
             if (enter) this._pauseActivate();

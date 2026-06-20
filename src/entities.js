@@ -672,12 +672,16 @@ class Enemy {
                 if (this.subTimer >= 0.45) { this.subState = 'MOVE'; this.subTimer = 0; s.setScale(base, base); }
             }
         } else if (this.type === EnemyType.HYPEMAN) {
-            // Бегство: если игрок ближе FLEE_DIST — уходит от него; иначе держится на месте.
+            // Кайтинг: держит игрока на краю круга хила. Дальше AURA_RADIUS — подходит;
+            // ближе FLEE_DIST — убегает; в промежутке стоит (гистерезис против дёрганья).
             const dx = s.x - px, dy = s.y - py;
             const d = Math.sqrt(dx * dx + dy * dy) || 1;
-            if (d < C.HYPEMAN.FLEE_DIST) {
+            if (d < C.HYPEMAN.FLEE_DIST) {            // игрок подошёл вплотную — бежит прочь
                 s.x = clamp(s.x + (dx / d) * this.speed * dt, 0, arenaW);
                 s.y = clamp(s.y + (dy / d) * this.speed * dt, 0, arenaH);
+            } else if (d > C.HYPEMAN.AURA_RADIUS) {   // далеко — подходит на радиус хила
+                s.x = clamp(s.x - (dx / d) * this.speed * dt, 0, arenaW);
+                s.y = clamp(s.y - (dy / d) * this.speed * dt, 0, arenaH);
             }
             this.walkTimer += dt * 8;
             s.angle = Math.sin(this.walkTimer) * 6; // покачивание «в такт»

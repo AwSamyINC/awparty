@@ -700,9 +700,8 @@ class MainScene extends Phaser.Scene {
                 this.audio.play('sfx_boss_warning', { volume: 0.35, minGap: 80 });
             }
             if (e.justFiredVolley) {
-                const off = e.volleyAngleOffset || 0; // смещение углов кольца (Сабвуфер чередует кольца)
                 for (let v = 0; v < 12; v++) {
-                    const ang = v * (2 * Math.PI / 12) + off;
+                    const ang = v * (2 * Math.PI / 12);
                     const dir = { x: Math.cos(ang), y: Math.sin(ang) };
                     const pr = this.spawnEnemyProjectile(e.sprite.x, e.sprite.y, e.sprite.x + dir.x * 500, e.sprite.y + dir.y * 500);
                     pr.damage = e.damage; // волна босса: урон = урон босса

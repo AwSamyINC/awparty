@@ -52,19 +52,32 @@ const SaveSystem = {
         if (typeof b.playerName !== 'string') b.playerName = '';
         else b.playerName = b.playerName.slice(0, 20);
         if (b.language !== 'en' && b.language !== 'ru') b.language = detectLang();
-        // Новая шкала HP: база 100, +10 за уровень MAX HP (макс 170). Старые сейвы (3..10) обнуляются до 100.
-        if (b.permMaxHp < 100) b.permMaxHp = 100;
-        if (b.permMaxHp > 170) b.permMaxHp = 170;
-        if (b.permDamage < 1) b.permDamage = 1;
-        if (b.permSpeed < 220) b.permSpeed = 220;
-        if (b.permDashLevel < 0 || b.permDashLevel > 5) b.permDashLevel = 0;
-        if (b.permCritChance < 0 || b.permCritChance > 5) b.permCritChance = 0;
-        if (b.permRegen < 0 || b.permRegen > 3) b.permRegen = 0;
-        if (b.permArmor < 0 || b.permArmor > 2) b.permArmor = 0;
-        if (b.permMagnet < 0 || b.permMagnet > 3) b.permMagnet = 0;
-        if (b.permMultishot < 0 || b.permMultishot > 1) b.permMultishot = 0;
-        if (b.permArtifacts < 0 || b.permArtifacts > 127) b.permArtifacts = 0;
-        if (!(b.maxChapterUnlocked >= 1 && b.maxChapterUnlocked <= 3)) b.maxChapterUnlocked = 1;
+
+        // Числа из недоверенного источника (тампер localStorage или ЧУЖОЙ облачный blob —
+        // таблица cloud_saves открыта на запись по нику): приводим к конечному числу и
+        // клэмпим в допустимый диапазон, иначе — дефолт. Раньше NaN/строка/огромное число
+        // проходили насквозь (например, totalCoins не проверялся вовсе) и ломали сейв.
+        const numClamp = (v, lo, hi, def) => (Number.isFinite(v) ? clamp(v, lo, hi) : def);
+
+        // Монеты: целые, неотрицательные, с разумным потолком.
+        b.totalCoins = Number.isFinite(b.totalCoins) ? clamp(Math.floor(b.totalCoins), 0, 1e12) : 0;
+
+        // Перм-прокачка: верхние границы совпадают с максимумами магазина (shop.js nodeMaxLevel).
+        // Новая шкала HP: база 100, +10 за уровень MAX HP (макс 170). Старые сейвы (3..10) → 100.
+        b.permMaxHp = Math.round(numClamp(b.permMaxHp, 100, 170, 100));
+        b.permDamage = numClamp(b.permDamage, 1, 10, 1);
+        b.permSpeed = numClamp(b.permSpeed, 220, 270, 220);
+        b.permDashLevel = numClamp(b.permDashLevel, 0, 5, 0);
+        b.permCritChance = numClamp(b.permCritChance, 0, 5, 0);
+        b.permRegen = numClamp(b.permRegen, 0, 3, 0);
+        b.permArmor = numClamp(b.permArmor, 0, 2, 0);
+        b.permMagnet = numClamp(b.permMagnet, 0, 3, 0);
+        b.permMultishot = numClamp(b.permMultishot, 0, 1, 0);
+        b.permArtifacts = Math.floor(numClamp(b.permArtifacts, 0, 127, 0));
+        b.maxChapterUnlocked = numClamp(b.maxChapterUnlocked, 1, 3, 1);
+        // Битовая маска активных артефактов — целое в диапазоне (битовые операции ниже закрепят).
+        if (!Number.isFinite(b.permActiveArtifacts)) b.permActiveArtifacts = 0;
+        else b.permActiveArtifacts = Math.floor(b.permActiveArtifacts) & 127;
 
         b.permActiveArtifacts &= b.permArtifacts; // active — подмножество owned
         // Не больше 3 активных

@@ -22,12 +22,15 @@
   `SECURITY DEFINER`-функции `submit_score` / `rename_player`.
 
 ### 2. Валидация в `submit_score`
-RPC обязан, как минимум:
-- **Ограничить время сверху** разумным потолком (рекорд не может превышать,
-  например, нескольких часов) — отсекает явную накрутку `time`.
-- **Проверить, что `time` — конечное неотрицательное число** (не `NaN`/`Infinity`).
+> Рейтинг ранжируется по **`score`** (при равенстве — по `time`), поэтому ключевой
+> потолок — именно по `score`. RPC обязан, как минимум:
+- **Ограничить `score` сверху** разумным потолком — отсекает явную накрутку (главная дыра:
+  с публичным `anon`-ключом любой может вызвать RPC с произвольным `p_score`).
+- **Ограничить `time` сверху** (например, несколькими часами) и проверить, что
+  `score`/`time` — конечные неотрицательные числа (не `NaN`/`Infinity`).
 - **Санитизировать имя**: обрезать длину, убрать управляющие символы и переводы строк.
-- **Хранить одну запись на игрока в режиме** (`name + mode`), оставляя лучшее время.
+- **Хранить одну запись на игрока в режиме** (`name + mode`), оставляя лучший результат
+  (очки, при равенстве — время).
 - **Ограничить частоту вызовов** (rate limit) — чтобы нельзя было залить таблицу.
 
 ### 3. Валидация в `rename_player`
@@ -38,16 +41,19 @@ RPC обязан, как минимум:
 ## Готовая миграция (выполнить в Supabase → SQL Editor)
 
 > ⚠️ **Перед запуском на боевом проекте:** сделай бэкап таблицы (или прогони на копии/
-> dev-проекте). Скрипт предполагает таблицу `public.leaderboard` со столбцами
-> `name text`, `mode text`, `time numeric`, `created_at timestamptz` и существующие
-> RPC `submit_score`/`rename_player` (их вызывает клиент). Сверь имена столбцов со
-> своей схемой. Включение RLS меняет доступ к таблице — проверь, что чтение топа
-> и отправка результата работают после миграции. Скрипт идемпотентен (можно
-> повторять).
+> dev-проекте). Скрипт приведён под **реальную схему** (сверено аудитом 2026-06):
+> таблица `public.leaderboard` со столбцами `name text`, `mode text`, `score integer`,
+> `time double precision`, `created_at timestamptz` и уникальным индексом на
+> `(name, mode)`. RPC `submit_score`/`rename_player` вызывает клиент. Включение RLS
+> меняет доступ к таблице — проверь, что чтение топа и отправка результата работают
+> после миграции. Скрипт идемпотентен (можно повторять).
 
 ```sql
 -- ============================================================================
 -- AwParty — защита общей таблицы рекордов. Выполнить целиком.
+-- Схема (сверено аудитом): leaderboard(id, name text, mode text, score integer,
+-- time double precision, created_at timestamptz). Метрика рейтинга — score
+-- (при равенстве — time).
 -- ============================================================================
 
 -- 0. Уникальность «одна запись на игрока в режиме» (нужно для on conflict).
@@ -62,31 +68,38 @@ create policy "anon read leaderboard"
   on public.leaderboard for select to anon using (true);
 -- (намеренно НЕТ insert/update/delete-политик для anon)
 
--- 2. submit_score: валидирует вход, хранит лучшее время на (name, mode).
-create or replace function public.submit_score(p_name text, p_time numeric, p_mode text)
+-- 2. submit_score: валидирует вход, хранит ЛУЧШИЙ РЕЗУЛЬТАТ по очкам на (name, mode).
+create or replace function public.submit_score(
+  p_name text, p_score integer, p_time double precision, p_mode text)
 returns void language plpgsql security definer set search_path = public as $$
 declare v_name text; v_mode text;
 begin
   v_mode := case when p_mode = 'hardcore' then 'hardcore' else 'normal' end;
 
-  -- время: конечное неотрицательное, не больше 6 часов (отсекает накрутку)
+  -- score: целое неотрицательное, разумный потолок (главная защита от накрутки).
+  -- Подбери верхнюю границу под реальный максимум забега.
+  if p_score is null or p_score < 0 or p_score > 5000000 then
+    raise exception 'invalid score';
+  end if;
+  -- время: конечное неотрицательное, не больше 6 часов.
   if p_time is null or p_time <> p_time or p_time < 0 or p_time > 21600 then
     raise exception 'invalid time';
   end if;
-
-  -- имя: убрать управляющие символы, обрезать до 20
+  -- имя: убрать управляющие символы, обрезать до 20.
   v_name := left(btrim(regexp_replace(coalesce(p_name, ''), '[[:cntrl:]]', '', 'g')), 20);
   if v_name = '' then v_name := 'Anonymous'; end if;
 
-  insert into leaderboard (name, mode, time, created_at)
-  values (v_name, v_mode, p_time, now())
+  insert into public.leaderboard (name, score, time, mode, created_at)
+  values (v_name, p_score, p_time, v_mode, now())
   on conflict (name, mode) do update
-    set time = greatest(leaderboard.time, excluded.time),
-        created_at = case when excluded.time > leaderboard.time
+    set score = greatest(leaderboard.score, excluded.score),
+        time  = case when excluded.score > leaderboard.score
+                     then excluded.time else leaderboard.time end,
+        created_at = case when excluded.score > leaderboard.score
                           then now() else leaderboard.created_at end;
 end; $$;
 
--- 3. rename_player: проверка имени + слияние по лучшему времени в каждом режиме.
+-- 3. rename_player: проверка имени + слияние по лучшим ОЧКАМ в каждом режиме.
 create or replace function public.rename_player(p_old text, p_new text)
 returns void language plpgsql security definer set search_path = public as $$
 declare v_new text;
@@ -96,23 +109,25 @@ begin
   if p_old is null or btrim(p_old) = '' then raise exception 'invalid old name'; end if;
   if v_new = p_old then return; end if;
 
-  -- перенести строки старого имени под новое, слив лучшее время по режимам
-  insert into leaderboard (name, mode, time, created_at)
-    select v_new, o.mode, o.time, o.created_at from leaderboard o where o.name = p_old
+  -- перенести строки старого имени под новое, слив лучший результат по очкам
+  insert into public.leaderboard (name, score, time, mode, created_at)
+    select v_new, o.score, o.time, o.mode, o.created_at from leaderboard o where o.name = p_old
   on conflict (name, mode) do update
-    set time = greatest(leaderboard.time, excluded.time),
-        created_at = case when excluded.time > leaderboard.time
+    set score = greatest(leaderboard.score, excluded.score),
+        time  = case when excluded.score > leaderboard.score
+                     then excluded.time else leaderboard.time end,
+        created_at = case when excluded.score > leaderboard.score
                           then excluded.created_at else leaderboard.created_at end;
   delete from leaderboard where name = p_old;
 end; $$;
 
 -- 4. Права: вызывать RPC может anon; тело выполняется с правами владельца (definer).
-grant execute on function public.submit_score(text, numeric, text) to anon;
+grant execute on function public.submit_score(text, integer, double precision, text) to anon;
 grant execute on function public.rename_player(text, text) to anon;
 ```
 
-Самое важное против накрутки — пункты 1 (RLS, нет прямой записи) и 2 (потолок `time`).
-Пункты 3–4 — для целостности переименования и доступа к RPC.
+Самое важное против накрутки — пункты 1 (RLS, нет прямой записи) и 2 (потолок `score`,
+плюс `time`). Пункты 3–4 — для целостности переименования и доступа к RPC.
 
 Rate limiting (защита от заливки таблицы спамом) тут не покрыт — его удобнее вынести
 на уровень Supabase Edge Functions / сетевого прокси, либо ограничивать в RPC по

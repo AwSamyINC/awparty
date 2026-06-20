@@ -210,6 +210,22 @@ const ARTIFACTS = [
     { name: 'MAGNET CORE', desc: 'Infinite pickup range', cost: 5000 },
 ];
 
+// Артефакты как именованные биты маски save.permActiveArtifacts. Порядок битов
+// СОВПАДАЕТ с индексами массива ARTIFACTS выше и ARTIFACT_ICONS в shop.js — это
+// единый контракт: правя порядок, меняй согласованно во всех трёх местах. Геймплейный
+// код читает артефакты ТОЛЬКО через hasArtifact(save, ARTIFACT.X), без сырых сдвигов.
+const ARTIFACT = {
+    BLOOD_PACT:   1 << 0, // килл лечит 2 HP
+    GLASS_CANNON: 1 << 1, // +30% урон, макс. HP -20
+    ECHO_CHAMBER: 1 << 2, // пули рикошетят от стен
+    SOUL_LEECH:   1 << 3, // +0.5% крит за килл (макс +5%)
+    BERSERKER:    1 << 4, // HP<=40%: урон x1.5, без замедления после дэша
+    IRON_SKIN:    1 << 5, // первые 3 удара за забег блокируются
+    MAGNET_CORE:  1 << 6, // бесконечный радиус подбора
+};
+// Активен ли артефакт у игрока (save.permActiveArtifacts — битовая маска активных, макс 3).
+function hasArtifact(save, flag) { return (save.permActiveArtifacts & flag) !== 0; }
+
 // Texture manifest: key -> file (Game.cpp constructor)
 const TEXTURE_MANIFEST = [
     ['floor', 'floor.jpg'],

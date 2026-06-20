@@ -25,6 +25,7 @@ module.exports = [
                 ANIM_DIRS: 'readonly', UPGRADE_ICONS: 'readonly',
                 LEGENDARY_UPGRADE_IDS: 'readonly', LEGENDARY_CARD_CHANCE: 'readonly',
                 ABILITY_COOLDOWNS: 'readonly', ABILITY_ICONS: 'readonly', ARTIFACTS: 'readonly',
+                ARTIFACT: 'readonly', hasArtifact: 'readonly',
 
                 // i18n.js
                 t: 'readonly', setLanguage: 'readonly', detectLang: 'readonly',

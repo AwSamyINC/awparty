@@ -4,33 +4,80 @@
 // очки/артефакты), таблица очков за тип врага. Инлайновый цикл попаданий пуль/снарядов
 // пока остаётся в updatePlaying (scene.js).
 
-// Сепарация врагов через сетку (Game::update)
-MainScene.prototype.separateEnemies = function(px, py) {
+// Построение спатиал-грида врагов (Game::update). Переиспользуемая сетка: ячейки-массивы
+// создаются один раз и живут между кадрами; каждый кадр чистим только задействованные
+// ячейки (по списку _sepTouched), а не аллоцируем новую сетку — меньше нагрузки на GC.
+// ОДИН грид за кадр обслуживает И сепарацию врагов (separateEnemies), И бродфейз попаданий
+// пуль (_bulletEnemyCollisions). Оба потребителя вызываются сразу после построения, пока
+// массив enemies не мутируется (смерти/распад мошеров обрабатываются позже).
+MainScene.prototype._buildEnemyGrid = function() {
         const CELL = C.CELL_SIZE;
         const cols = Math.ceil(C.ARENA_WIDTH / CELL);
         const rows = Math.ceil(C.ARENA_HEIGHT / CELL);
-        // Переиспользуемая сетка: ячейки-массивы создаются один раз и живут между кадрами.
-        // Каждый кадр чистим только задействованные ячейки (по списку _sepTouched), а не
-        // аллоцируем новый массив сетки и массив на каждую ячейку — меньше нагрузки на GC.
         if (!this._sepGrid || this._sepGrid.length !== cols * rows) {
             this._sepGrid = new Array(cols * rows);
             for (let i = 0; i < this._sepGrid.length; i++) this._sepGrid[i] = [];
             this._sepTouched = [];
         }
+        this._sepCols = cols; this._sepRows = rows;
         const grid = this._sepGrid;
         for (const i of this._sepTouched) grid[i].length = 0;
         this._sepTouched.length = 0;
-        const idx = (x, y) => {
-            let c = Math.floor(x / CELL), r = Math.floor(y / CELL);
-            c = clamp(c, 0, cols - 1); r = clamp(r, 0, rows - 1);
-            return r * cols + c;
-        };
         for (const e of this.enemies) {
-            const i = idx(e.sprite.x, e.sprite.y);
+            const c = clamp(Math.floor(e.sprite.x / CELL), 0, cols - 1);
+            const r = clamp(Math.floor(e.sprite.y / CELL), 0, rows - 1);
+            const i = r * cols + c;
             const cell = grid[i];
             if (cell.length === 0) this._sepTouched.push(i); // запоминаем непустые ячейки для очистки
             cell.push(e);
         }
+    };
+
+// Бродфейз попаданий пуль по гриду врагов (_buildEnemyGrid должен быть построен этим кадром):
+// каждая пуля проверяет лишь 3×3 окрестность своей ячейки вместо O(врагов×пуль). Радиусы
+// попадания (BULLET_HIT 50px / BOSS_HIT 150px) ≤ CELL_SIZE (150px), поэтому 3×3 гарантированно
+// покрывает любую цель в радиусе. Логика урона/пробития перенесена 1:1 из updatePlaying.
+MainScene.prototype._bulletEnemyCollisions = function() {
+        const CELL = C.CELL_SIZE;
+        const cols = this._sepCols, rows = this._sepRows, grid = this._sepGrid;
+        for (const b of this.bullets) {
+            if (b.isDestroyed) continue;
+            const bx = b.sprite.x, by = b.sprite.y;
+            const bcol = clamp(Math.floor(bx / CELL), 0, cols - 1);
+            const brow = clamp(Math.floor(by / CELL), 0, rows - 1);
+            for (let r = brow - 1; r <= brow + 1 && !b.isDestroyed; r++) {
+                if (r < 0 || r >= rows) continue;
+                for (let c = bcol - 1; c <= bcol + 1 && !b.isDestroyed; c++) {
+                    if (c < 0 || c >= cols) continue;
+                    const cell = grid[r * cols + c];
+                    for (const e of cell) {
+                        if (e.hp <= 0 || b.lastHit === e) continue;
+                        const hitDist = e.isBoss ? C.COLLISION.BOSS_HIT_SQ : C.COLLISION.BULLET_HIT_SQ;
+                        if (distSq(e.sprite.x, e.sprite.y, bx, by) < hitDist) {
+                            e.hp -= b.damage;
+                            e.hitFlashTimer = 0.08;
+                            this.dmgTexts.push(this.spawnDamageText(e.sprite.x, e.sprite.y, b.damage, b.isCrit));
+                            // Прострел: пуля проходит насквозь, следующему врагу — 50% урона.
+                            if (b.pierceLeft > 0) {
+                                b.pierceLeft--;
+                                b.lastHit = e; // не бить того же врага повторно
+                                b.damage = Math.max(1, Math.floor(b.damage * 0.5));
+                            } else {
+                                b.isDestroyed = true;
+                                break; // пуля израсходована — дальше ячейку не сканируем
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+// Сепарация врагов по уже построенному гриду (_buildEnemyGrid). Считается только в радиусе
+// ~1200px от игрока (SEPARATION_ACTIVE_SQ).
+MainScene.prototype.separateEnemies = function(px, py) {
+        const CELL = C.CELL_SIZE;
+        const cols = this._sepCols, rows = this._sepRows, grid = this._sepGrid;
         const R = C.COLLISION.SEPARATION_ACTIVE_SQ;
         for (let ei = 0; ei < this.enemies.length; ei++) {
             const e = this.enemies[ei];
@@ -86,13 +133,13 @@ MainScene.prototype.handleEnemyDeaths = function(px, py) {
             }
             // Очки за убийство (боссы дают больше). В безумном этапе очки не начисляются.
             if (!this.crazyMode) this.runScore += this._scoreFor(e);
-            if ((s.permActiveArtifacts >> 3) & 1) {
+            if (hasArtifact(s, ARTIFACT.SOUL_LEECH)) {
                 // +0.5% крита за килл, максимум +5% к базе (10 стаков).
                 const cap = p.baseCritChance + 0.05;
                 p.critChance = Math.min(cap, p.critChance + 0.005);
             }
             // BLOOD PACT: вампиризм за килл — 2 HP за убийство (новая шкала HP=100).
-            if (((s.permActiveArtifacts >> 0) & 1) && p.hp < p.maxHp) {
+            if (hasArtifact(s, ARTIFACT.BLOOD_PACT) && p.hp < p.maxHp) {
                 p.hp = Math.min(p.maxHp, p.hp + 2);
             }
             const ex = e.sprite.x, ey = e.sprite.y;

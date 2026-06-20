@@ -244,15 +244,14 @@ class Player {
             }
         }
 
-        // Призраки рывка
-        for (const g of this.ghosts) {
+        // Призраки рывка — обновление прозрачности и удаление отживших на месте,
+        // без аллокации нового массива каждый кадр (как и пулы — бережём GC).
+        for (let i = this.ghosts.length - 1; i >= 0; i--) {
+            const g = this.ghosts[i];
             g.lifetime -= dt;
+            if (g.lifetime <= 0) { g.img.destroy(); this.ghosts.splice(i, 1); continue; }
             g.img.setAlpha(150 / 255 * Math.max(0, g.lifetime / g.maxLifetime));
         }
-        this.ghosts = this.ghosts.filter(g => {
-            if (g.lifetime <= 0) { g.img.destroy(); return false; }
-            return true;
-        });
 
         if (this.messageTimer > 0) this.messageTimer -= dt;
 

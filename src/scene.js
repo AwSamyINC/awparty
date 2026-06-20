@@ -373,13 +373,13 @@ class MainScene extends Phaser.Scene {
         p.baseCritChance = 0.03 + s.permCritChance * 0.05;
         p.critChance = p.baseCritChance;
         p.armor = s.permArmor; p.damageAcc = 0;
-        p.pickupRadius = ((s.permActiveArtifacts >> 6) & 1) ? 99999 : 50 + s.permMagnet * 50;
-        p.ironSkinCharges = ((s.permActiveArtifacts >> 5) & 1) ? 3 : 0;
+        p.pickupRadius = hasArtifact(s, ARTIFACT.MAGNET_CORE) ? 99999 : 50 + s.permMagnet * 50;
+        p.ironSkinCharges = hasArtifact(s, ARTIFACT.IRON_SKIN) ? 3 : 0;
         p.soulLeechCritBonus = 0;
         this.bloodPactHealAcc = 0;
         this.coinCarry = 0;
 
-        if ((s.permActiveArtifacts >> 1) & 1) { p.maxHp = Math.max(10, p.maxHp - 20); p.hp = p.maxHp; }
+        if (hasArtifact(s, ARTIFACT.GLASS_CANNON)) { p.maxHp = Math.max(10, p.maxHp - 20); p.hp = p.maxHp; }
 
         p.level = 1; p.currentXP = 0; p.xpToNextLevel = 5; p.shootCooldown = 0.45;
         this.regenTimer = 0; this.shotsFired = 0;
@@ -542,7 +542,7 @@ class MainScene extends Phaser.Scene {
         p.update(dt, C.ARENA_WIDTH, C.ARENA_HEIGHT, input);
 
         // Berserker
-        if (((s.permActiveArtifacts >> 4) & 1) && p.hp <= Math.floor(p.maxHp * 0.4))
+        if (hasArtifact(s, ARTIFACT.BERSERKER) && p.hp <= Math.floor(p.maxHp * 0.4))
             p.currentSpeedMultiplier = Math.max(1.0, p.currentSpeedMultiplier);
 
         const px = p.sprite.x, py = p.sprite.y;
@@ -604,12 +604,12 @@ class MainScene extends Phaser.Scene {
             if (dx * dx + dy * dy > 1e-8) {
                 const isCrit = randInt(100) < Math.floor(p.critChance * 100);
                 let dmgMul = 1;
-                if ((s.permActiveArtifacts >> 1) & 1) dmgMul *= 1.3;
-                if (((s.permActiveArtifacts >> 4) & 1) && p.hp <= Math.floor(p.maxHp * 0.4)) dmgMul *= 1.5;
+                if (hasArtifact(s, ARTIFACT.GLASS_CANNON)) dmgMul *= 1.3;
+                if (hasArtifact(s, ARTIFACT.BERSERKER) && p.hp <= Math.floor(p.maxHp * 0.4)) dmgMul *= 1.5;
                 const finalDmg = Math.max(1, Math.floor((isCrit ? p.attackDamage * p.critMultiplier : p.attackDamage) * dmgMul + 0.5));
                 const n = normalize(dx, dy);
                 const mb = this.spawnBullet(px, py, n.x, n.y, finalDmg, isCrit);
-                if ((s.permActiveArtifacts >> 2) & 1) mb.ricochetsLeft = 1;
+                if (hasArtifact(s, ARTIFACT.ECHO_CHAMBER)) mb.ricochetsLeft = 1;
                 if (p.pierce) mb.pierceLeft = 1;
                 this.bullets.push(mb);
                 this.shotsFired++;
@@ -617,7 +617,7 @@ class MainScene extends Phaser.Scene {
                     const ang = 18 * Math.PI / 180, ca = Math.cos(ang), sa = Math.sin(ang);
                     const sd = { x: n.x * ca - n.y * sa, y: n.x * sa + n.y * ca };
                     const sb = this.spawnBullet(px, py, sd.x, sd.y, finalDmg, isCrit);
-                    if ((s.permActiveArtifacts >> 2) & 1) sb.ricochetsLeft = 1;
+                    if (hasArtifact(s, ARTIFACT.ECHO_CHAMBER)) sb.ricochetsLeft = 1;
                     if (p.pierce) sb.pierceLeft = 1;
                     this.bullets.push(sb);
                 }
@@ -665,10 +665,7 @@ class MainScene extends Phaser.Scene {
 
             const attackDist = e.isBoss ? C.COLLISION.BOSS_HIT_SQ : (e.type === EnemyType.GOBLIN ? C.COLLISION.GOBLIN_ATTACK_SQ : C.COLLISION.ENEMY_ATTACK_SQ);
             if (distSq(e.sprite.x, e.sprite.y, px, py) < attackDist) {
-                const oldHp = p.hp;
-                p.takeDamage(e.damage);
-                if (p.hp < oldHp) { this.triggerShake(0.2, 2 * e.damage); this.audio.play('sfx_player_hurt'); }
-                if (p.hp <= 0 && !this.isGameOver) this.onPlayerDeath();
+                this._damagePlayer(e.damage, 0.2, 2 * e.damage);
 
                 // Блейдмейл (шипы): враг, врезавшийся в героя, получает урон.
                 // Кулдаун на враге, чтобы контакт не сливал HP каждый кадр.
@@ -691,33 +688,18 @@ class MainScene extends Phaser.Scene {
                 if (proj > 0 && proj < e.beamLen) {
                     const perp = Math.abs(rx * -diry + ry * dirx); // отступ от линии
                     if (perp < e.beamWidth / 2 + C.STROBE_BEAM_HIT_MARGIN) {
-                        const oldHp = p.hp;
-                        p.takeDamage(C.STROBE_BEAM_DAMAGE);
-                        if (p.hp < oldHp) { this.triggerShake(0.25, 80); this.audio.play('sfx_player_hurt'); }
-                        if (p.hp <= 0 && !this.isGameOver) this.onPlayerDeath();
+                        this._damagePlayer(C.STROBE_BEAM_DAMAGE, 0.25, 80);
                     }
                 }
             }
 
-            for (const b of this.bullets) {
-                if (b.isDestroyed || b.lastHit === e) continue;
-                const hitDist = e.isBoss ? C.COLLISION.BOSS_HIT_SQ : C.COLLISION.BULLET_HIT_SQ;
-                if (distSq(e.sprite.x, e.sprite.y, b.sprite.x, b.sprite.y) < hitDist) {
-                    e.hp -= b.damage;
-                    e.hitFlashTimer = 0.08;
-                    this.dmgTexts.push(this.spawnDamageText(e.sprite.x, e.sprite.y, b.damage, b.isCrit));
-                    // Прострел: пуля проходит насквозь, следующему врагу — 50% урона.
-                    if (b.pierceLeft > 0) {
-                        b.pierceLeft--;
-                        b.lastHit = e; // не бить того же врага повторно
-                        b.damage = Math.max(1, Math.floor(b.damage * 0.5));
-                    } else {
-                        b.isDestroyed = true;
-                    }
-                }
-            }
         }
 
+        // Попадания пуль — через спатиал-грид (бродфейз, см. scene_combat.js): строим сетку
+        // врагов один раз, затем и пули, и сепарация опрашивают лишь 3×3 окрестность вместо
+        // O(врагов×пуль). Грид строится после цикла врагов — их позиции уже финальные.
+        this._buildEnemyGrid();
+        this._bulletEnemyCollisions();
         this.separateEnemies(px, py);
         this.handleEnemyDeaths(px, py);
 
@@ -725,7 +707,7 @@ class MainScene extends Phaser.Scene {
         this._filterDestroy(this.enemies, e => e.hp <= 0);
 
         // Echo Chamber: рикошет пуль от стен
-        if ((s.permActiveArtifacts >> 2) & 1) {
+        if (hasArtifact(s, ARTIFACT.ECHO_CHAMBER)) {
             for (const b of this.bullets) {
                 if (b.isDestroyed || b.ricochetsLeft <= 0) continue;
                 let x = b.sprite.x, y = b.sprite.y, hit = false;
@@ -779,10 +761,7 @@ class MainScene extends Phaser.Scene {
             if (pr.isDestroyed) continue;
             if (distSq(pr.sprite.x, pr.sprite.y, px, py) < C.COLLISION.PROJECTILE_HIT_SQ) {
                 pr.isDestroyed = true;
-                const oldHp = p.hp;
-                p.takeDamage(pr.damage);
-                if (p.hp < oldHp) { this.triggerShake(0.15, 15); this.audio.play('sfx_player_hurt'); }
-                if (p.hp <= 0 && !this.isGameOver) this.onPlayerDeath();
+                this._damagePlayer(pr.damage, 0.15, 15);
             }
         }
         this._filterRelease(this.enemyProjectiles, 'eproj', pr => pr.isDestroyed);
@@ -814,14 +793,14 @@ class MainScene extends Phaser.Scene {
                         w.hit = true;
                         p.sprite.x = clamp(p.sprite.x + (dx / dist) * SW.WAVE_KNOCKBACK, 0, C.ARENA_WIDTH);
                         p.sprite.y = clamp(p.sprite.y + (dy / dist) * SW.WAVE_KNOCKBACK, 0, C.ARENA_HEIGHT);
-                        const oldHp = p.hp;
-                        p.takeDamage(w.damage);
-                        if (p.hp < oldHp) { this.triggerShake(0.3, 60); this.audio.play('sfx_player_hurt'); }
-                        if (p.hp <= 0 && !this.isGameOver) this.onPlayerDeath();
+                        this._damagePlayer(w.damage, 0.3, 60);
                     }
                 }
             }
-            this.soundWaves = this.soundWaves.filter(w => w.timer < SW.WAVE_EXPAND + 0.15);
+            // Удаление отслуживших волн на месте (без аллокации нового массива каждый кадр).
+            for (let i = this.soundWaves.length - 1; i >= 0; i--) {
+                if (this.soundWaves[i].timer >= SW.WAVE_EXPAND + 0.15) this.soundWaves.splice(i, 1);
+            }
         }
 
         // Души боссов
@@ -879,6 +858,18 @@ class MainScene extends Phaser.Scene {
     }
 
     triggerShake(dur, mag) { this.cameras.main.shake(dur * 1000, mag / C.VIEW_WIDTH, true); }
+
+    // Единая точка нанесения урона игроку из любого источника (ближний бой, снаряд,
+    // звуковая волна, луч босса). Тряска/звук срабатывают только если HP реально упал
+    // (takeDamage может погасить урон бронёй/i-frames), смерть обрабатывается тут же —
+    // чтобы поведение источников не разъезжалось. shakeMag — амплитуда тряски при попадании.
+    _damagePlayer(amount, shakeDur, shakeMag) {
+        const p = this.player;
+        const oldHp = p.hp;
+        p.takeDamage(amount);
+        if (p.hp < oldHp) { this.triggerShake(shakeDur, shakeMag); this.audio.play('sfx_player_hurt'); }
+        if (p.hp <= 0 && !this.isGameOver) this.onPlayerDeath();
+    }
 
     // separateEnemies / handleEnemyDeaths / _scoreFor вынесены в scene_combat.js
     // Прогрессия фаз / спавн боссов / портал (_updatePhaseProgression, _updateSpawning,

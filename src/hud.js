@@ -29,11 +29,12 @@ class HUD {
         this.xpFill = add(this.scene.add.rectangle(50, 20, 0, 25, 0x00ffff).setOrigin(0, 0));
         this.lvlText = add(this.scene.add.text(50, 55, 'LVL 1', { fontFamily: FONT, fontSize: '35px', color: '#ffff00', stroke: '#000', strokeThickness: 2 }).setOrigin(0, 0));
 
-        // --- HP BAR ---
+        // --- HP BAR --- (над карточками способностей, по центру внизу)
         const hpW = 400;
-        this.hpBg = add(this.scene.add.rectangle(W / 2 - hpW / 2, H - 60, hpW, 30, 0x280000).setOrigin(0, 0).setStrokeStyle(4, 0xff0032));
-        this.hpFill = add(this.scene.add.rectangle(W / 2 - hpW / 2, H - 60, hpW, 30, 0xff3232).setOrigin(0, 0));
-        this.hpText = add(this.scene.add.text(W / 2, H - 45, 'HP 100 / 100', { fontFamily: FONT, fontSize: '24px', color: '#fff', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0.5));
+        const hpY = H - 166; // верх полосы: карточки абилок начинаются на H-124, оставляем зазор
+        this.hpBg = add(this.scene.add.rectangle(W / 2 - hpW / 2, hpY, hpW, 30, 0x280000).setOrigin(0, 0).setStrokeStyle(4, 0xff0032));
+        this.hpFill = add(this.scene.add.rectangle(W / 2 - hpW / 2, hpY, hpW, 30, 0xff3232).setOrigin(0, 0));
+        this.hpText = add(this.scene.add.text(W / 2, hpY + 15, 'HP 100 / 100', { fontFamily: FONT, fontSize: '24px', color: '#fff', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0.5));
 
         // --- TIMER ---
         this.timerText = add(this.scene.add.text(W / 2, 90, '00:00', { fontFamily: FONT, fontSize: '50px', color: '#ff0096', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 0.5));
@@ -64,11 +65,11 @@ class HUD {
             this.skillCards.push({ bg, icon, stars });
         }
 
-        // --- ABILITY CARDS (bottom-right): [DASH][Q][E][R] ---
+        // --- ABILITY CARDS (снизу по центру, под HP-баром): [DASH][Q][E][R] ---
         const ABILITY_SLOTS = 4;
         const cardW = 88, cardH = 110, gap = 10;
         const totalW = ABILITY_SLOTS * cardW + (ABILITY_SLOTS - 1) * gap;
-        const startX = W - totalW - 14;
+        const startX = (W - totalW) / 2;
         const startY = H - cardH - 14;
         const keyLabels = ['', 'Q', 'E', 'R'];
         this.abilityCards = [];

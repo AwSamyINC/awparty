@@ -913,8 +913,9 @@ MainScene.prototype.onKeyDown = function(e) {
         const right = (code === 'KeyD' || code === 'ArrowRight');
         const enter = (code === 'Enter' || code === 'Space');
         const esc = (code === 'Escape');
-        const pauseKey = (code === 'KeyP'); // пауза/возобновление: ESC убран из забега —
-        // браузер по ESC принудительно выходит из фуллскрина (этого JS не отменить).
+        const pauseKey = (code === 'KeyP' || code === 'Escape'); // пауза/возобновление: P или ESC.
+        // Примечание: в фуллскрине браузер по ESC дополнительно выходит из полноэкранного
+        // режима (этого JS не отменить) — пауза при этом всё равно откроется.
 
         if (st === GameState.MENU) {
             if (up) { this.selectedMenuIndex = (this.selectedMenuIndex + 2) % 3; this._restyleList(this.selectedMenuIndex); }

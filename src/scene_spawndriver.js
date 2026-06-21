@@ -56,9 +56,11 @@ MainScene.prototype._updatePhaseProgression = function(dt, px, py) {
 // Гейт обычного спавна по фазе: пока не CLEARING, не во время босса фазы 2/3 и не в переходе.
 MainScene.prototype._updateSpawning = function(dt, px, py) {
         const s = this.save;
+        if (this._crazySpawnDelay > 0) this._crazySpawnDelay -= dt; // пауза после смерти 3-го босса
         const spawningActive = (this.gamePhase !== GamePhase.CLEARING)
             && !(this.gamePhase === GamePhase.PHASE_2 && this.phase2BossSpawned)
             && !(this.gamePhase === GamePhase.PHASE_3 && this._boss3Alive)
+            && !(this.crazyMode && this._crazySpawnDelay > 0)   // 10с тишины после убийства 3-го босса
             && (this.phaseTransitionTimer < 0);
         if (spawningActive) {
             const p2 = this.gamePhase === GamePhase.PHASE_2;
@@ -97,6 +99,7 @@ MainScene.prototype._startCrazyMode = function() {
         if (this.crazyMode) return;
         this._snapshotStage(); // итоги этапа 3 (до начала безумия)
         this.crazyMode = true;
+        this._crazySpawnDelay = 10; // пауза 10с перед спавном «безумных» мобов после смерти 3-го босса
         this.portal = { x: C.ARENA_WIDTH / 2, y: C.PORTAL_TOP_MARGIN };
         // Спрайт портала (если ассет есть) — под игроком (depth 8), с неоновым ореолом из вектора.
         if (this.textures.exists('portal')) {

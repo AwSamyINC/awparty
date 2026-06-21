@@ -450,7 +450,7 @@ class MainScene extends Phaser.Scene {
         } else {
             this.arena.setTileScale(1, 1);
         }
-        this.crazyMode = false; this.portal = null;
+        this.crazyMode = false; this.portal = null; this._crazySpawnDelay = 0;
         this._pendingPortalSubmit = false; this._nameClaimOnly = false; this._lastRank = null;
         if (this.portalSprite) { this.portalSprite.destroy(); this.portalSprite = null; }
         this.stageStats = []; this._stagePrev = { time: 0, kills: 0, coins: 0, score: 0 };

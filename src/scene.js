@@ -363,6 +363,8 @@ class MainScene extends Phaser.Scene {
         this.phaseText = this.addUI(this.add.text(W / 2, H * 0.38, '', { fontFamily: FONT, fontSize: '110px', color: '#00ffc8', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5, 0.5)).setDepth(92);
         // Подсказка зачистки
         this.clearText = this.addUI(this.add.text(W / 2, 18, '', { fontFamily: FONT, fontSize: '30px', color: '#ff5050', stroke: '#000', strokeThickness: 2 }).setOrigin(0.5, 0)).setDepth(92);
+        // Подсказка управления: слева по центру, показывается первые ~10с забега и затухает.
+        this.controlsHint = this.addUI(this.add.text(48, H / 2, '', { fontFamily: FONT, fontSize: '28px', color: '#ffffff', stroke: '#000', strokeThickness: 3, align: 'left', lineSpacing: 12 }).setOrigin(0, 0.5)).setDepth(92).setVisible(false);
         // Сообщение об апгрейде над игроком (world space)
         this.upgradeMsg = this.addWorld(this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '40px', color: '#ffff00', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5, 0.5)).setDepth(20);
         this.upgradeMsg.setVisible(false);
@@ -1063,6 +1065,14 @@ class MainScene extends Phaser.Scene {
             this.clearText.setVisible(true).setText(t('clear_all') + '  [' + this.enemies.length + ']').setColor('#ff5050').setAlpha(1);
             this.clearText.y = 18; // дефолт: вверху по центру (не наезжает на HP-бар живого босса)
         } else this.clearText.setVisible(false);
+
+        // Подсказка управления: первые ~10с забега, слева по центру, к концу окна затухает.
+        if (this.survivalTimer < 10 && !this.isGameOver) {
+            const a = this.survivalTimer > 8.5 ? Math.max(0, 1 - (this.survivalTimer - 8.5) / 1.5) : 1;
+            this.controlsHint.setVisible(true)
+                .setText([t('hint_move'), t('hint_aim'), t('hint_dash'), t('hint_ability'), t('hint_pause')].join('\n'))
+                .setAlpha(a);
+        } else this.controlsHint.setVisible(false);
 
         // Предупреждения перед боссом
         let warnA = 0, warnCol = 0xff0000;

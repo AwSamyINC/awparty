@@ -193,6 +193,12 @@ const I18N = {
         // --- Безумный этап / портал (после третьего босса) ---
         crazy_title: 'FRENZY',
         crazy_hint: 'ENEMIES ENRAGED — ESCAPE THROUGH THE PORTAL',
+        // Подсказка управления (первые ~10с забега, слева по центру)
+        hint_move: 'WASD — Move',
+        hint_aim: 'Mouse — Aim (auto-fire)',
+        hint_dash: 'Space — Dash',
+        hint_ability: 'Q / E / R — Abilities',
+        hint_pause: 'P — Pause',
         stageclear_title: 'STAGES CLEARED',
         stageclear_sub: 'You broke through all three stages',
         stageclear_stage: 'Stage',
@@ -403,6 +409,12 @@ const I18N = {
         // --- Безумный этап / портал (после третьего босса) ---
         crazy_title: 'БЕЗУМИЕ',
         crazy_hint: 'ВРАГИ В ЯРОСТИ — УХОДИ В ПОРТАЛ',
+        // Подсказка управления (первые ~10с забега, слева по центру)
+        hint_move: 'WASD — Движение',
+        hint_aim: 'Мышь — Прицел (автоогонь)',
+        hint_dash: 'Пробел — Рывок',
+        hint_ability: 'Q / E / R — Способности',
+        hint_pause: 'P — Пауза',
         stageclear_title: 'ЭТАПЫ ПРОЙДЕНЫ',
         stageclear_sub: 'Ты прорвался через все три этапа',
         stageclear_stage: 'Этап',

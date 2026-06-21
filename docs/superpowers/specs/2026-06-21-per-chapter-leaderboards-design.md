@@ -20,32 +20,35 @@
 ## Модель данных
 
 ### Онлайн (Supabase) — SQL для пользователя
+ВАЖНО: выполнять по одному запросу. Тело функции — `language sql` БЕЗ внутренних `;`
+(только финальный `$func$;`), иначе раннеры, режущие скрипт по `;`, рвут dollar-quote
+(`unterminated dollar-quoted string`). Блок `do $$…$$` не используем по той же причине.
+
 ```sql
 -- 1) колонка главы
 alter table public.leaderboard add column if not exists chapter int not null default 1;
 
--- 2) одна запись на игрока в связке (name, mode, chapter)
---    (снять старое ограничение на (name, mode), если было; добавить новое)
-do $$ begin
-  if exists (select 1 from pg_constraint where conname = 'leaderboard_name_mode_key') then
-    alter table public.leaderboard drop constraint leaderboard_name_mode_key;
-  end if;
-end $$;
+-- 2) найти старое уникальное ограничение/индекс на (name, mode)
+select conname from pg_constraint where conrelid='public.leaderboard'::regclass and contype='u';
+select indexname from pg_indexes where tablename='leaderboard';
+
+-- 3) снять старую уникальность (name, mode) и создать (name, mode, chapter)
+--    (constraint → drop constraint <имя>; индекс → drop index <имя>)
+alter table public.leaderboard drop constraint <ИМЯ_ИЗ_ШАГА_2>;
 create unique index if not exists leaderboard_name_mode_chapter_key
   on public.leaderboard (name, mode, chapter);
 
--- 3) submit_score с главой: upsert по (name, mode, chapter), хранит лучший (time asc, score desc)
+-- 4) submit_score с главой (выполнить блок целиком; внутри нет ';')
 create or replace function public.submit_score(
   p_name text, p_score int, p_time numeric, p_mode text, p_chapter int
-) returns void language plpgsql security definer as $$
-begin
+) returns void language sql security definer as $func$
   insert into public.leaderboard (name, score, time, mode, chapter, created_at)
   values (p_name, p_score, p_time, p_mode, p_chapter, now())
   on conflict (name, mode, chapter) do update
     set score = excluded.score, time = excluded.time, created_at = now()
     where excluded.time < public.leaderboard.time
-       or (excluded.time = public.leaderboard.time and excluded.score > public.leaderboard.score);
-end $$;
+       or (excluded.time = public.leaderboard.time and excluded.score > public.leaderboard.score)
+$func$;
 ```
 Ранг считаем без нового RPC — count-запросом PostgREST (см. ниже). RLS должен разрешать
 `select`/`count` (как сейчас для топ-10). Существующие строки получат `chapter = 1`.

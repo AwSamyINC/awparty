@@ -510,7 +510,7 @@ class Enemy {
             this.strobeTimer += dt;
             // Лазер: прицел в игрока уже зафиксирован (аимбот), босс ЗАМИРАЕТ на 0.2с —
             // прицел и корпус неподвижны, затем выстрел. Никакого вращения.
-            const telDur = (this.strobeAttack === 0 ? 0.2 : this.strobeAttack === 1 ? 0.5 : 0.4) * tf;
+            const telDur = (this.strobeAttack === 0 ? 0.5 : this.strobeAttack === 1 ? 0.5 : 0.4) * tf;
             if (this.strobeTimer >= telDur) {
                 this.strobeTimer = 0;
                 this.strobeState = 'EXECUTE';

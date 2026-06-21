@@ -668,6 +668,7 @@ class MainScene extends Phaser.Scene {
         // Враги + снаряды/коллизии
         for (const e of this.enemies) {
             e.update(dt, px, py, C.ARENA_WIDTH, C.ARENA_HEIGHT);
+            if (e.spawning) continue; // во время появления враг инертен (нет контакта/атак/луча)
 
             if (e.justThrew) {
                 const pr = this.spawnEnemyProjectile(e.sprite.x, e.sprite.y, e.throwTargetPos.x, e.throwTargetPos.y);

@@ -61,11 +61,78 @@ MainScene.prototype._drawSoundWaveWalls = function(g) {
         strokeV(right, 12, 0.16); strokeV(right, 4, 0.9);
     };
 
+// Телеграфы/эффекты появления (читаются из e.spawning/e.spawnTimer/e.spawnStyle).
+// Рисуются в worldFx (под спрайтами врагов), поэтому ложатся «на землю».
+MainScene.prototype._drawSpawnFx = function(g) {
+        const tm = this.globalTime;
+        for (const e of this.enemies) {
+            if (!e.spawning) continue;
+            const dur = e.spawnDuration || 0.45;
+            const k = clamp(e.spawnTimer / dur, 0, 1);
+            const x = (e._spawnGX != null) ? e._spawnGX : e.sprite.x; // точка появления («земля»)
+            const y = (e._spawnGY != null) ? e._spawnGY : e.sprite.y;
+
+            if (e.spawnStyle === 'boss1') {
+                // Тень растёт по мере падения → кольцо-удар при приземлении.
+                const land = 0.85;
+                if (k < land) {
+                    const t = k / land, r = 50 + 150 * t, p = 0.5 + 0.5 * Math.sin(tm * 14);
+                    g.fillStyle(0x000000, 0.35 * t); g.fillCircle(x, y, r);
+                    g.lineStyle(4, rgb(255, 120, 0), 0.4 + 0.3 * p); g.strokeCircle(x, y, r);
+                } else {
+                    const t = (k - land) / (1 - land);
+                    g.lineStyle(12, rgb(255, 140, 0), (1 - t) * 0.8); g.strokeCircle(x, y, 150 + 520 * t);
+                    g.lineStyle(5, rgb(255, 220, 90), (1 - t)); g.strokeCircle(x, y, 100 + 360 * t);
+                }
+            } else if (e.spawnStyle === 'boss2') {
+                // Эхо-следы позади летящего босса → соник-бум на месте прибытия.
+                const arrive = 0.7;
+                if (k < arrive) {
+                    const cx = e.sprite.x, cy = e.sprite.y, dx = e._spawnDX || 0, dy = e._spawnDY || 0;
+                    for (let i = 1; i <= 5; i++) {
+                        const d = i * 50, a = (1 - i / 6) * 0.45 * (1 - k / arrive);
+                        g.fillStyle(rgb(255, 40, 160), a); g.fillCircle(cx - dx * d, cy - dy * d, 34 * (1 - i / 8));
+                    }
+                } else {
+                    const t = (k - arrive) / (1 - arrive);
+                    g.lineStyle(9, rgb(255, 40, 160), (1 - t) * 0.85); g.strokeCircle(x, y, 90 + 380 * t);
+                }
+            } else if (e.spawnStyle === 'boss3') {
+                // Сходящиеся к точке лучи + строб-ядро (неон).
+                const flick = (Math.random() < 0.5) ? 1 : 0.35, beams = 7;
+                for (let i = 0; i < beams; i++) {
+                    const ang = i * (Math.PI * 2 / beams) + tm * 0.6, far = 1500 * (1 - k);
+                    const ox = x + Math.cos(ang) * far, oy = y + Math.sin(ang) * far;
+                    g.lineStyle(3, (i & 1) ? rgb(0, 230, 255) : rgb(255, 0, 180), 0.25 + 0.5 * flick);
+                    g.beginPath(); g.moveTo(ox, oy); g.lineTo(x, y); g.strokePath();
+                }
+                g.fillStyle(rgb(180, 240, 255), (0.1 + 0.3 * flick) * k); g.fillCircle(x, y, 30 + 90 * k);
+            } else if (e.spawnStyle === 'bossdoc') {
+                // Расходящиеся зелёные кольца + пульсирующий крест-глиф.
+                const fade = Math.min(1, k * 2);
+                for (let i = 0; i < 3; i++) {
+                    const rr = (tm * 0.6 + i / 3) % 1;
+                    g.lineStyle(4, rgb(60, 255, 130), (1 - rr) * 0.5 * fade); g.strokeCircle(x, y, 30 + rr * 200);
+                }
+                const cs = 45 + 12 * Math.sin(tm * 6);
+                g.lineStyle(8, rgb(120, 255, 170), 0.5 * fade);
+                g.beginPath(); g.moveTo(x - cs, y); g.lineTo(x + cs, y); g.moveTo(x, y - cs); g.lineTo(x, y + cs); g.strokePath();
+            } else {
+                // Обычный враг: стягивающееся красно-оранжевое кольцо-предупреждение.
+                const pulse = 0.5 + 0.5 * Math.sin(tm * 18);
+                const r = 75 * (1 - 0.45 * k), a = (0.35 + 0.4 * pulse) * (1 - 0.3 * k);
+                g.lineStyle(5, rgb(255, 60 + 120 * pulse, 0), a); g.strokeCircle(x, y, r);
+                g.lineStyle(2, rgb(255, 180, 60), a * 0.8); g.strokeCircle(x, y, r * 0.55);
+            }
+        }
+    };
+
     // ===================== РЕНДЕР МИРА (FX) =====================
 MainScene.prototype.drawWorldFx = function() {
         const g = this.worldFx;
         g.clear();
         this._drawSoundWaveWalls(g); // стены-границы в виде звуковых волн
+        this._drawSpawnFx(g);        // телеграфы/эффекты появления врагов и боссов
         // Трейлы пуль (PlayState.cpp: круги радиусом 8*ratio, alpha 180*ratio).
         // Читаем кольцевой буфер: логический индекс i (0 = старейшая точка) → физический
         // (start + i) % cap. Старые точки — тусклее/мельче, свежие — ярче/крупнее.

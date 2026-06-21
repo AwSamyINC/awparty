@@ -115,6 +115,17 @@ const C = {
         BD: { hp: 180, speed: 110, damage: 50, scale: 3.2 },
     },
 
+    // Анимация появления: пока spawnTimer < длительности, юнит инертен (не двигается,
+    // не бьёт). Обычные враги — телеграф+материализация; у боссов своя анимация (см.
+    // Enemy._updateSpawn / MainScene._drawSpawnFx).
+    SPAWN: {
+        ENEMY_DURATION: 0.45,
+        BOSS1_DURATION: 1.4,
+        BOSS2_DURATION: 1.2,
+        BOSS3_DURATION: 1.6,
+        BOSSDOC_DURATION: 1.4,
+    },
+
     // --- Meta-progression caps (Game.h) ---
     MAX_PERM_MAXHP: 10,
     MAX_PERM_DAMAGE: 10,

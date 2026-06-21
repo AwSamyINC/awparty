@@ -338,6 +338,15 @@ class Enemy {
         this.sprite.setOrigin(0.5, 0.5);
         this._setTargetSize(C.ENEMY.BASE_SIZE);
         this.maxHp = this.hp;
+
+        // Анимация появления: юнит инертен, пока spawning (нет движения/атак/контакта —
+        // см. ранний выход в update() и гейт `if (e.spawning) continue` в сцене).
+        // Боссы переопределяют spawnStyle/spawnDuration в своих make*-методах.
+        this.spawning = true;
+        this.spawnTimer = 0;
+        this.spawnDuration = C.SPAWN.ENEMY_DURATION;
+        this.spawnStyle = 'enemy';
+        this._spawnBurst = false; // одноразовый импакт (тряска/частицы) уже сыгран
     }
 
     _setTargetSize(targetSize) {
@@ -406,6 +415,7 @@ class Enemy {
         this.sprite.setScale(this.baseScale * st.scale, this.baseScale * st.scale);
         this.hp = st.hp; this.maxHp = st.hp; this.speed = st.speed; this.damage = st.damage;
         this.splitOnDeath = false;
+        this.spawning = false; // разлетаются из убитого мошера сразу, без телеграфа/инертности
     }
 
     // Хайпмен (глава 2+): убегает от игрока, сам почти не бьёт. Ауру (+HP/реген союзникам)
@@ -425,6 +435,7 @@ class Enemy {
         this.hp = st.hp; this.maxHp = st.hp; this.speed = st.speed; this.damage = st.damage;
         this.bossScale = this.baseScale * st.scale; // базовый масштаб (для анимации ходьбы/сброса)
         this.sprite.setScale(this.bossScale, this.bossScale);
+        this.spawnStyle = 'boss1'; this.spawnDuration = C.SPAWN.BOSS1_DURATION; // падение с неба
     }
 
     makeBoss2(boss2TexKey) {
@@ -437,6 +448,7 @@ class Enemy {
         this.hp = st.hp; this.maxHp = st.hp; this.speed = st.speed; this.damage = st.damage;
         this.bossScale = this.baseScale * st.scale;
         this.sprite.setScale(this.bossScale, this.bossScale);
+        this.spawnStyle = 'boss2'; this.spawnDuration = C.SPAWN.BOSS2_DURATION; // влёт рывком
     }
 
     // STROBE — босс 3 этапа (лазерный VJ). Текстура-плейсхолдер (boss2), тонируется
@@ -454,6 +466,7 @@ class Enemy {
         this.strobeState = 'ROAM';
         this.strobeTimer = 0;
         this.strobeAttack = -1;
+        this.spawnStyle = 'boss3'; this.spawnDuration = C.SPAWN.BOSS3_DURATION; // сборка из лазеров
     }
 
     // Босс-доктор (этап 1, глава 2): аура лечения (считает сцена _updateHypeAuras) +
@@ -470,6 +483,7 @@ class Enemy {
         this.docState = 'ROAM';
         this.docTimer = 0;
         this.throwTargetPos = { x: 0, y: 0 };
+        this.spawnStyle = 'bossdoc'; this.spawnDuration = C.SPAWN.BOSSDOC_DURATION; // зелёный свет
     }
 
     // Конечный автомат STROBE: ROAM -> TELEGRAPH -> EXECUTE -> RECOVER, по кругу.
@@ -638,8 +652,127 @@ class Enemy {
         }
     }
 
+    // Анимация появления (инертная фаза). На первом тике запоминаем целевой масштаб/позицию
+    // (их уже выставил конструктор/make*), затем гоняем прогресс k∈[0..1] по spawnStyle.
+    // Сами телеграфы/кольца/лучи рисует сцена в _drawSpawnFx по этому же состоянию.
+    _updateSpawn(dt) {
+        const s = this.sprite;
+        if (this._spawnInit === undefined) {
+            this._spawnInit = true;
+            this._spawnSX = s.scaleX; this._spawnSY = s.scaleY; // целевой масштаб (после make*)
+            this._spawnGX = s.x; this._spawnGY = s.y;           // целевая («земля») позиция
+            if (this.spawnStyle === 'boss2') {
+                const a = Math.random() * Math.PI * 2; // направление влёта дашера
+                this._spawnDX = Math.cos(a); this._spawnDY = Math.sin(a);
+            }
+            s.setAlpha(0);
+        }
+        this.spawnTimer += dt;
+        const k = clamp(this.spawnTimer / this.spawnDuration, 0, 1);
+        const sx = this._spawnSX, sy = this._spawnSY;
+        const gx = this._spawnGX, gy = this._spawnGY;
+
+        switch (this.spawnStyle) {
+            case 'boss1': {
+                // Падение с неба → удар (тень растёт в _drawSpawnFx).
+                const land = 0.85;
+                if (k < 0.35) { s.setAlpha(0); s.setScale(sx, sy); s.setPosition(gx, gy - 800); }
+                else if (k < land) {
+                    const f = (k - 0.35) / (land - 0.35), fe = f * f, sc = 0.8 + 0.2 * fe;
+                    s.setAlpha(1); s.angle = 0; s.setScale(sx * sc, sy * sc);
+                    s.setPosition(gx, (gy - 800) + 800 * fe);
+                } else {
+                    const t = (k - land) / (1 - land); // squash-восстановление при ударе
+                    s.setAlpha(1); s.setPosition(gx, gy);
+                    s.setScale(sx * (1.15 - 0.15 * t), sy * (0.8 + 0.2 * t));
+                }
+                if (!this._spawnBurst && k >= land) {
+                    this._spawnBurst = true;
+                    this.scene.triggerShake(0.3, 28);
+                    this._spawnPuff(36, rgb(160, 160, 160), rgb(255, 150, 0));
+                }
+                break;
+            }
+            case 'boss2': {
+                // Влёт рывком со «смазом» вдоль движения → соник-бум.
+                const arrive = 0.7, dx = this._spawnDX, dy = this._spawnDY;
+                if (k < arrive) {
+                    const f = k / arrive, fe = 1 - (1 - f) * (1 - f); // декселерация
+                    const dist = 1200 * (1 - fe), stretch = 1 + 1.2 * (1 - fe);
+                    s.setPosition(gx - dx * dist, gy - dy * dist);
+                    s.setAlpha(clamp(f * 2, 0, 1));
+                    s.angle = Math.atan2(dy, dx) * DEG;
+                    s.setScale(sx * stretch, sy / Math.sqrt(stretch));
+                } else {
+                    const t = (k - arrive) / (1 - arrive);
+                    s.setPosition(gx, gy); s.angle = 0; s.setAlpha(1);
+                    s.setScale(sx * (1 + 0.2 * (1 - t)), sy * (1 - 0.1 * (1 - t)));
+                }
+                if (!this._spawnBurst && k >= arrive) {
+                    this._spawnBurst = true;
+                    this.scene.triggerShake(0.2, 18);
+                    this._spawnPuff(28, rgb(255, 40, 160), rgb(255, 160, 220));
+                }
+                break;
+            }
+            case 'boss3': {
+                // Строб-проявление в неоне (мигание нарастает к 1; лучи — в _drawSpawnFx).
+                const flick = Math.random() < 0.5 ? 0.35 : 1, sc = 0.6 + 0.4 * k;
+                s.setPosition(gx, gy); s.angle = 0;
+                s.setAlpha(k < 0.85 ? flick * Math.min(1, k * 1.5) : 1);
+                s.setScale(sx * sc, sy * sc);
+                if (!this._spawnBurst && k >= 0.92) {
+                    this._spawnBurst = true;
+                    this.scene.triggerShake(0.25, 22);
+                    this._spawnPuff(30, rgb(0, 230, 255), rgb(255, 0, 180));
+                }
+                break;
+            }
+            case 'bossdoc': {
+                // Мягкое проявление в зелёном свете (кольца/крест — в _drawSpawnFx).
+                const m = clamp((k - 0.4) / 0.6, 0, 1), sc = 0.6 + 0.4 * m;
+                s.setPosition(gx, gy); s.angle = 0;
+                s.setAlpha(m); s.setScale(sx * sc, sy * sc);
+                if (!this._spawnBurst && k >= 0.95) {
+                    this._spawnBurst = true;
+                    this._spawnPuff(24, rgb(60, 255, 130), rgb(180, 255, 200));
+                }
+                break;
+            }
+            default: {
+                // Обычный враг: телеграф (первая половина, рисует сцена) → материализация
+                // с лёгким overshoot (easeOutBack).
+                const m = clamp((k - 0.5) / 0.5, 0, 1);
+                const c1 = 1.70158, c3 = c1 + 1;
+                const back = m <= 0 ? 0 : 1 + c3 * Math.pow(m - 1, 3) + c1 * Math.pow(m - 1, 2);
+                s.setPosition(gx, gy); s.angle = 0;
+                s.setAlpha(m); s.setScale(sx * back, sy * back);
+                if (!this._spawnBurst && k >= 1) {
+                    this._spawnBurst = true;
+                    this._spawnPuff(10, rgb(255, 90, 0), rgb(255, 200, 60));
+                }
+                break;
+            }
+        }
+
+        if (k >= 1) { // появление завершено — вернуть точные цель/масштаб, включить AI
+            this.spawning = false;
+            s.setAlpha(1); s.setScale(sx, sy); s.angle = 0; s.setPosition(gx, gy);
+        }
+    }
+
+    // Облачко частиц в точке появления (пул сцены). c1/c2 — чередуемые цвета.
+    _spawnPuff(n, c1, c2) {
+        const sc = this.scene, s = this.sprite;
+        if (!sc.particles || !sc.spawnParticle) return;
+        for (let i = 0; i < n; i++) sc.particles.push(sc.spawnParticle(s.x, s.y, (i & 1) ? c1 : c2));
+    }
+
     update(dt, px, py, arenaW, arenaH) {
         const s = this.sprite;
+
+        // Пока идёт анимация появления — юнит инертен (только spawn-FX), AI не работает.
+        if (this.spawning) { this._updateSpawn(dt); return; }
 
         if (this.type !== EnemyType.BOSS && this.type !== EnemyType.GOBLIN && this.type !== EnemyType.SUBWOOFER && this.type !== EnemyType.HYPEMAN) {
             const dir = normalize(px - s.x, py - s.y);

@@ -502,6 +502,7 @@ class Enemy {
                 this.beamAngle = Math.atan2(py - s.y, px - s.x); // зафиксировать прицел
                 this.beamActive = false;
                 this.beamTelegraph = (this.strobeAttack === 0);
+                this.beamSweep = (Math.random() < 0.5 ? 1 : -1) * Math.PI; // cw/ccw выбираем заранее — видно на нагреве
                 this.burstCount = 0;
                 this.burstTimer = 0;
                 this._teleported = false;
@@ -509,8 +510,12 @@ class Enemy {
             }
         } else if (this.strobeState === 'TELEGRAPH') {
             this.strobeTimer += dt;
-            // Лазер «нагревается» — босс разворачивает корпус в сторону выстрела (телеграф).
-            if (this.strobeAttack === 0) s.angle = this.beamAngle * DEG;
+            // Лазер «нагревается» — луч уже начинает поворот в сторону свипа (cw/ccw),
+            // чтобы игрок заранее читал направление; на выстреле свип продолжается отсюда же.
+            if (this.strobeAttack === 0) {
+                this.beamAngle += Math.sign(this.beamSweep) * C.STROBE_WINDUP_SPEED * dt;
+                s.angle = this.beamAngle * DEG;
+            }
             const telDur = (this.strobeAttack === 0 ? 0.9 : this.strobeAttack === 1 ? 0.5 : 0.4) * tf;
             if (this.strobeTimer >= telDur) {
                 this.strobeTimer = 0;
@@ -518,8 +523,7 @@ class Enemy {
                 if (this.strobeAttack === 0) {
                     this.beamTelegraph = false;
                     this.beamActive = true;
-                    this.beamStart = this.beamAngle;
-                    this.beamSweep = (Math.random() < 0.5 ? 1 : -1) * Math.PI; // влево или вправо
+                    this.beamStart = this.beamAngle; // продолжаем свип с угла, набранного на нагреве (beamSweep уже выбран)
                 } else if (this.strobeAttack === 1) {
                     this.burstTimer = 1.0; // чтобы первое кольцо вылетело сразу
                 } else if (this.strobeAttack === 2) {

@@ -665,6 +665,8 @@ class MainScene extends Phaser.Scene {
                 const pr = this.spawnEnemyProjectile(e.sprite.x, e.sprite.y, e.throwTargetPos.x, e.throwTargetPos.y);
                 pr.damage = C.BOSSDOC.STUN_DAMAGE;
                 pr.isStun = true;
+                pr.vx *= C.BOSSDOC.STUN_PROJ_SPEED_MULT; // стан-снаряд доктора быстрее обычных
+                pr.vy *= C.BOSSDOC.STUN_PROJ_SPEED_MULT;
                 this.enemyProjectiles.push(pr);
             }
             if (e.justSoundWave) {

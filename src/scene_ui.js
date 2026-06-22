@@ -58,6 +58,7 @@ MainScene.prototype.rebuildMenu = function() {
             this.phaseOverlay.setVisible(false);
             this.clearText.setVisible(false);
             this.warnRect.setVisible(false);
+            if (this.warnText) this.warnText.setVisible(false);
             this.upgradeMsg.setVisible(false);
             if (this.controlsHint) this.controlsHint.setVisible(false);
             if (this.bossArrowFx) this.bossArrowFx.clear();

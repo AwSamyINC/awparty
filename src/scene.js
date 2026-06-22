@@ -287,8 +287,7 @@ class MainScene extends Phaser.Scene {
             this._applyChapterEnemy(e);
             this.enemies.push(e);
         }
-        this.audio.play('sfx_boss_warning', { volume: 0.6 });
-        this.triggerShake(0.3, 30);
+        this.triggerShake(0.3, 30); // звук убран по запросу — остаётся только тряска
     }
     saveGame() { SaveSystem.save(this.save); this._scheduleCloudBackup(); }
 
@@ -366,9 +365,11 @@ class MainScene extends Phaser.Scene {
         // Затемнение/фейд (фаза-переход + стартовый)
         this.fadeRect = this.addUI(this.add.rectangle(0, 0, W, H, 0x000000, 0).setOrigin(0, 0));
         this.fadeRect.setDepth(100);
-        // Предупреждение (красное/фиолетовое мигание)
+        // Предупреждение (красное/фиолетовое мигание) — оставлен скрытым, мерцание убрано.
         this.warnRect = this.addUI(this.add.rectangle(0, 0, W, H, 0xff0000, 0).setOrigin(0, 0));
         this.warnRect.setDepth(90);
+        // Надпись-предупреждение перед боссом по центру экрана (вместо мерцания).
+        this.warnText = this.addUI(this.add.text(W / 2, H / 2, '', { fontFamily: FONT, fontSize: '120px', color: '#ff0000', stroke: '#000', strokeThickness: 6 }).setOrigin(0.5, 0.5)).setDepth(92).setVisible(false);
         // Уведомление о фазе
         this.phaseOverlay = this.addUI(this.add.rectangle(0, 0, W, H, 0x000000, 0).setOrigin(0, 0)).setDepth(91);
         this.phaseText = this.addUI(this.add.text(W / 2, H * 0.38, '', { fontFamily: FONT, fontSize: '110px', color: '#00ffc8', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5, 0.5)).setDepth(92);
@@ -1092,18 +1093,22 @@ class MainScene extends Phaser.Scene {
                 .setAlpha(a);
         } else this.controlsHint.setVisible(false);
 
-        // Предупреждения перед боссом
-        let warnA = 0, warnCol = 0xff0000;
+        // Предупреждение перед боссом: вместо мерцания экрана — надпись "Attention" по центру.
+        let warning = false, warnCol = '#ff0000';
         if (this.survivalTimer > 60 && this.survivalTimer < 63 && !this.isGameOver) {
-            warnA = Math.abs(Math.sin(this.survivalTimer * 10)) * 100 / 255; warnCol = 0xff0000;
+            warning = true; warnCol = '#ff0000';
         } else if (this.gamePhase === GamePhase.PHASE_2 && this.phase2Timer > 57 && this.phase2Timer < 60 && !this.phase2BossSpawned && !this.isGameOver) {
-            warnA = Math.abs(Math.sin(this.phase2Timer * 10)) * 110 / 255; warnCol = 0x8200ff;
+            warning = true; warnCol = '#b46bff';
         } else if (this.gamePhase === GamePhase.PHASE_3 && this.phase3Timer > 57 && this.phase3Timer < 60 && !this.phase3BossSpawned && !this.isGameOver) {
-            warnA = Math.abs(Math.sin(this.phase3Timer * 10)) * 110 / 255; warnCol = 0x00e6ff;
+            warning = true; warnCol = '#00e6ff';
         }
-        this.warnRect.setVisible(warnA > 0).setFillStyle(warnCol, warnA);
-        // Звук «внимание» — зациклен, пока мерцает экран; стоп, когда мерцание гаснет.
-        if (warnA > 0) {
+        this.warnRect.setVisible(false); // мерцание экрана убрано
+        if (warning) {
+            const pulse = 0.65 + 0.35 * Math.abs(Math.sin(this.globalTime * 6)); // мягкая пульсация надписи (не мерцание экрана)
+            this.warnText.setVisible(true).setText('Attention').setColor(warnCol).setAlpha(pulse);
+        } else this.warnText.setVisible(false);
+        // Звук «внимание» — зациклен, пока активно предупреждение (как и раньше).
+        if (warning) {
             if (!this._warnSound) this._warnSound = this.audio.playLoopSfx('sfx_boss_warning', { volume: 0.8 });
         } else if (this._warnSound) { this.audio.releaseLoopSfx(this._warnSound); this._warnSound = null; }
 

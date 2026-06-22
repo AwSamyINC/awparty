@@ -562,6 +562,14 @@ class MainScene extends Phaser.Scene {
                 if (p.pierce) mb.pierceLeft = 1;
                 this.bullets.push(mb);
                 this.shotsFired++;
+                if (p.doubleTapLevel > 0 && Math.random() < (0.15 + 0.10 * (p.doubleTapLevel - 1))) {
+                    const isCrit2 = randInt(100) < Math.floor(p.critChance * 100);
+                    const dmg2 = Math.max(1, Math.floor((isCrit2 ? p.attackDamage * p.critMultiplier : p.attackDamage) * dmgMul + 0.5));
+                    const db = this.spawnBullet(px, py, n.x, n.y, dmg2, isCrit2);
+                    if (hasArtifact(s, ARTIFACT.ECHO_CHAMBER)) db.ricochetsLeft = 1;
+                    if (p.pierce) db.pierceLeft = 1;
+                    this.bullets.push(db);
+                }
                 if (s.permMultishot > 0 && this.shotsFired % 8 === 0) {
                     const ang = 18 * Math.PI / 180, ca = Math.cos(ang), sa = Math.sin(ang);
                     const sd = { x: n.x * ca - n.y * sa, y: n.x * sa + n.y * ca };
@@ -800,6 +808,7 @@ class MainScene extends Phaser.Scene {
 
     _damagePlayer(amount, shakeDur, shakeMag) {
         const p = this.player;
+        if (p.damageReduction > 0) amount = Math.max(1, Math.round(amount * (1 - p.damageReduction)));
         const oldHp = p.hp;
         p.takeDamage(amount);
         if (p.hp < oldHp) { this.triggerShake(shakeDur, shakeMag); this.audio.play('sfx_player_hurt'); }

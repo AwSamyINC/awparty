@@ -105,14 +105,14 @@
             <div class="ring"></div>
             <img class="ico" src="assets/icon.png" alt="" />
         </div>
-        <div class="txt" id="loaderTxt">Loading…</div>
+        <div class="txt" id="loaderTxt">Loading, please wait…</div>
     </div>
     <script>
         (function () {
             // i18n ещё не загружен — язык метки определяем по браузеру.
             var ru = (navigator.language || '').toLowerCase().indexOf('ru') === 0;
             var el = document.getElementById('loaderTxt');
-            if (el) el.textContent = ru ? 'Загрузка…' : 'Loading…';
+            if (el) el.textContent = ru ? 'Загрузка, подождите…' : 'Loading, please wait…';
             // Вызывается из MainScene.create(), когда меню построено и первый кадр готов.
             window.__awHideLoader = function () {
                 var l = document.getElementById('loader');

@@ -12,7 +12,7 @@ class Player {
 
         this.level = 1;
         this.currentXP = 0;
-        this.xpToNextLevel = 5;
+        this.xpToNextLevel = C.XP_BASE;
         this.pickupRadius = 100;
 
         this.maxHp = 100;

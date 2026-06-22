@@ -54,8 +54,8 @@ const C = {
     },
 
     SPHERE: {
-        RADIUS: 150,
-        SIZE: 90,
+        RADIUS: 115,
+        SIZE: 60,
         HIT_DIST_SQ: 90 * 90,
         DAMAGE_MULT: 0.5,
         HIT_CD: 0.4,
@@ -173,6 +173,11 @@ const C = {
     BOSS_TIME_CAP: 60,
     BOSS_KILL_MIN_TIME: 30,
     BOSS_WARN_KILLS: 8,
+
+    // Линейная кривая опыта: cost(L) = XP_BASE + XP_STEP * (L - 1)
+    // Калибровка под боссов: lvl 5 у б1, lvl 10 у б2, lvl ~15 у б3.
+    XP_BASE: 20,   // цена 1-го уровня (XP)
+    XP_STEP: 1,    // прирост цены за каждый следующий уровень (XP)
 
     PORTAL_TOP_MARGIN: 280,
     PORTAL_RADIUS: 140,

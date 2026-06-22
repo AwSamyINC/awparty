@@ -43,10 +43,13 @@ class HUD {
         this.bossBarWidth = bW;
 
         const iconKeys = UPGRADE_ICONS;
-        const cardColors = [0xff7800, 0xff3232, 0x00e6ff, 0xb400ff, 0x32ff64, 0x9600ff, 0xffd200, 0x9600ff, 0x9600ff, 0x9600ff, 0xffd200];
+        // Рамки по тиру — как на карточках левел-апа (common/rare/legendary).
+        const TIER_STROKE = [0x9a9a9a, 0x9600ff, 0xffd200];
+        const TIER_SW = [2, 3, 4];
         this.skillCards = [];
         for (let i = 0; i < CARD_COUNT; i++) {
-            const bg = add(this.scene.add.rectangle(0, 0, 64, 80, 0x0f001e, 210 / 255).setOrigin(0, 0).setStrokeStyle(2, cardColors[i]));
+            const tier = CARD_TIER[i];
+            const bg = add(this.scene.add.rectangle(0, 0, 64, 80, 0x0f001e, 210 / 255).setOrigin(0, 0).setStrokeStyle(TIER_SW[tier], TIER_STROKE[tier]));
             const icon = add(this.scene.add.sprite(0, 0, iconKeys[i]).setOrigin(0.5, 0.5));
             const isc = 44 / Math.max(icon.width, icon.height);
             icon.setScale(isc, isc);
@@ -195,7 +198,7 @@ class HUD {
             this.bossBg.setVisible(false); this.bossFill.setVisible(false); this.bossName.setVisible(false);
         }
 
-        const cardW2 = 64, gap2 = 10;
+        const cardW2 = 64, gap2 = 10, perRow = 5, rowH = 92;
         let col = 0;
         for (let i = 0; i < CARD_COUNT; i++) {
             this.skillCounts[i] = runPickCounts[i];
@@ -204,8 +207,8 @@ class HUD {
                 card.bg.setVisible(false); card.icon.setVisible(false); card.stars.setVisible(false);
                 continue;
             }
-            const cx = 50 + col * (cardW2 + gap2);
-            const cy = 100;
+            const cx = 50 + (col % perRow) * (cardW2 + gap2);
+            const cy = 100 + Math.floor(col / perRow) * rowH;
             card.bg.setPosition(cx, cy).setVisible(true);
             card.icon.setPosition(cx + cardW2 / 2, cy + 26).setVisible(true);
             let stars;

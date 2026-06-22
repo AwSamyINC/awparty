@@ -353,7 +353,7 @@ class MainScene extends Phaser.Scene {
 
         if (hasArtifact(s, ARTIFACT.GLASS_CANNON)) { p.maxHp = Math.max(10, p.maxHp - 20); p.hp = p.maxHp; }
 
-        p.level = 1; p.currentXP = 0; p.xpToNextLevel = 5; p.shootCooldown = 0.45;
+        p.level = 1; p.currentXP = 0; p.xpToNextLevel = C.XP_BASE; p.shootCooldown = 0.45;
         this.regenTimer = 0; this.shotsFired = 0;
         this.killCount = 0; this.coinsThisRun = 0; this.runScore = 0;
         p.sprite.setPosition(C.ARENA_WIDTH / 2, C.ARENA_HEIGHT / 2);
@@ -936,7 +936,7 @@ class MainScene extends Phaser.Scene {
         const p = this.player;
         p.level++;
         p.currentXP -= p.xpToNextLevel;
-        p.xpToNextLevel *= 1.5;
+        p.xpToNextLevel += C.XP_STEP;
         p.hp = Math.min(p.maxHp, p.hp + 20);
         this.levelUpAnimTimer = 0;
 

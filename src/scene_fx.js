@@ -177,6 +177,18 @@ MainScene.prototype.drawWorldFx = function() {
                 g.fillCircle(cx + Math.cos(a) * 26, cy + Math.sin(a) * 10, 6);
             }
         }
+        if (this.player && this.player.damageReduction > 0) {
+            const ps = this.player.sprite;
+            const lvl = Math.round(this.player.damageReduction / 0.10);
+            const pulse = (Math.sin(this.globalTime * 4) + 1) / 2;
+            const rr = 75;
+            g.fillStyle(rgb(0, 180, 255), 0.05 + 0.03 * lvl + 0.03 * pulse);
+            g.fillCircle(ps.x, ps.y, rr);
+            g.lineStyle(2 + lvl, rgb(60, 200, 255), 0.30 + 0.12 * lvl + 0.2 * pulse);
+            g.strokeCircle(ps.x, ps.y, rr);
+            g.lineStyle(2, rgb(180, 245, 255), (0.25 + 0.12 * lvl) * (0.6 + 0.4 * pulse));
+            g.strokeCircle(ps.x, ps.y, rr - 6);
+        }
         if (this.playerBeam) {
             const pb = this.playerBeam;
             const a = clamp(pb.timer / 0.28, 0, 1);

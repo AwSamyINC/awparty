@@ -925,15 +925,34 @@ class MainScene extends Phaser.Scene {
         p.xpToNextLevel *= 1.5;
         p.hp = Math.min(p.maxHp, p.hp + 20);
         this.levelUpAnimTimer = 0;
-        const pool = [0, 1, 2, 3, 4];
-        for (const lid of LEGENDARY_UPGRADE_IDS) {
-            if (this.runUpgradeLevels[lid] === 0 && Math.random() < LEGENDARY_CARD_CHANCE) pool.push(lid);
-        }
+
+        const avail = (id) => this.runUpgradeLevels[id] < CARD_MAX_LEVEL[id];
+        const poolByTier = (tier, taken) => {
+            const out = [];
+            for (let id = 0; id < CARD_COUNT; id++)
+                if (CARD_TIER[id] === tier && avail(id) && taken.indexOf(id) < 0) out.push(id);
+            return out;
+        };
+        const rollTier = () => {
+            const total = TIER_WEIGHTS[0] + TIER_WEIGHTS[1] + TIER_WEIGHTS[2];
+            let r = Math.random() * total;
+            for (let td = 0; td < 3; td++) { if (r < TIER_WEIGHTS[td]) return td; r -= TIER_WEIGHTS[td]; }
+            return TIER.COMMON;
+        };
+
         const ids = [];
-        while (ids.length < 3) {
-            const c = pool[randInt(pool.length)];
-            if (!ids.includes(c)) ids.push(c);
+        for (let slot = 0; slot < 3; slot++) {
+            let cand = poolByTier(rollTier(), ids);
+            if (cand.length === 0) {
+                cand = [];
+                for (let id = 0; id < CARD_COUNT; id++) if (avail(id) && ids.indexOf(id) < 0) cand.push(id);
+            }
+            if (cand.length === 0) break;
+            ids.push(cand[randInt(cand.length)]);
         }
+
+        if (ids.length === 0) { p.hp = p.maxHp; this.setState(GameState.PLAYING); return; }
+
         this.levelUpIds = ids;
         this.selectedLevelUpIndex = -1;
         this.audio.play('sfx_levelup', { volume: 0.55 });
@@ -942,6 +961,7 @@ class MainScene extends Phaser.Scene {
 
     applyUpgrade(id) {
         const p = this.player;
+        const lvl = this.runUpgradeLevels[id] + 1;
         if (id === 0) p.shootCooldown = Math.max(0.22, p.shootCooldown * 0.93);
         else if (id === 1) p.attackDamage += 1;
         else if (id === 2 && p.speed < 400) p.speed += 20;
@@ -949,9 +969,13 @@ class MainScene extends Phaser.Scene {
         else if (id === 4) { p.maxHp += 10; p.hp = p.maxHp; }
         else if (id === 5) p.bladeMail = true;
         else if (id === 6) p.pierce = true;
+        else if (id === 7) p.damageReduction = 0.10 * lvl;
+        else if (id === 8) p.critChance += 0.10;
+        else if (id === 9) p.sphereLevel = lvl;
+        else if (id === 10) p.doubleTapLevel = lvl;
         p.lastUpgradeId = id;
         p.messageTimer = 2.0;
-        if (id >= 0 && id < 7) this.runUpgradeLevels[id]++;
+        if (id >= 0 && id < CARD_COUNT) this.runUpgradeLevels[id]++;
         this.selectedLevelUpIndex = -1;
         p.currentCooldown = Math.max(p.currentCooldown, 0.2);
         this.setState(GameState.PLAYING);

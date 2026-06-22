@@ -805,7 +805,7 @@ class MainScene extends Phaser.Scene {
         // Пластинки
         for (const v of this.vinyls) {
             v.update(dt);
-            if (distSq(v.sprite.x, v.sprite.y, px, py) < C.COLLISION.VINYL_PICKUP_SQ) { v.isCollected = true; if (p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + 10); }
+            if (distSq(v.sprite.x, v.sprite.y, px, py) < C.COLLISION.VINYL_PICKUP_SQ) { v.isCollected = true; if (p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * 0.2)); } // винил лечит 20% от макс. HP
         }
         this._filterRelease(this.vinyls, 'vinyl', v => v.isCollected);
 

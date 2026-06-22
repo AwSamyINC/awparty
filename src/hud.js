@@ -81,11 +81,22 @@ class HUD {
                 const cy = sy + cardH - 17;
                 const spaceOuter = add(this.scene.add.rectangle(cx, cy, 58, 14, 0x000000, 0).setOrigin(0.5, 0.5).setStrokeStyle(2, 0x00dcc3, 200 / 255));
                 const spaceInner = add(this.scene.add.rectangle(cx, cy + 2, 46, 6, 0x00dcc3, 60 / 255).setOrigin(0.5, 0.5));
+                this.spaceOuter = spaceOuter;
+                this.spaceInner = spaceInner;
                 keyLabel.setVisible(false);
             }
         }
 
         this.fx = add(this.scene.add.graphics());
+
+        this._hpZone = { x: W / 2 - hpW / 2 - 20, y: hpY - 14, w: hpW + 40, h: 58 };
+        this._abZone = { x: startX - 12, y: startY - 10, w: totalW + 24, h: cardH + 20 };
+        this._hpFadeObjs = [this.hpBg, this.hpFill, this.hpText];
+        this._abFadeObjs = [];
+        for (const c of this.abilityCards) this._abFadeObjs.push(c.bg, c.icon, c.keyLabel);
+        if (this.spaceOuter) this._abFadeObjs.push(this.spaceOuter, this.spaceInner);
+        this._hpAlpha = 1;
+        this._abAlpha = 1;
     }
 
     setVisible(v) {
@@ -93,6 +104,10 @@ class HUD {
         if (!v && this.fx) this.fx.clear();
         if (v) {
             this._lastLevel = this._lastHp = this._lastMaxHp = this._lastCoins = this._lastTimer = undefined;
+            this._hpAlpha = 1; this._abAlpha = 1;
+            if (this._hpFadeObjs) for (const o of this._hpFadeObjs) o.setAlpha(1);
+            if (this._abFadeObjs) for (const o of this._abFadeObjs) o.setAlpha(1);
+            if (this.fx) this.fx.setAlpha(1);
             this._applyConditionalVisibility();
         }
     }
@@ -263,6 +278,25 @@ class HUD {
                 this.fx.fillCircle(card.cx, card.cy, 4);
             }
         }
+
+        this._updateHoverFade();
+    }
+
+    _updateHoverFade() {
+        if (!this._hpZone) return;
+        const ptr = this.scene.input.activePointer;
+        const mx = ptr.x, my = ptr.y;
+        const inZone = (z) => mx >= z.x && mx <= z.x + z.w && my >= z.y && my <= z.y + z.h;
+        const hpTarget = inZone(this._hpZone) ? 0.15 : 1;
+        const abTarget = inZone(this._abZone) ? 0.15 : 1;
+        let dt = this.scene.game.loop.delta / 1000;
+        if (!(dt > 0) || dt > 0.1) dt = 0.016;
+        const k = Math.min(1, dt * 12);
+        this._hpAlpha += (hpTarget - this._hpAlpha) * k;
+        this._abAlpha += (abTarget - this._abAlpha) * k;
+        for (const o of this._hpFadeObjs) o.setAlpha(this._hpAlpha);
+        for (const o of this._abFadeObjs) o.setAlpha(this._abAlpha);
+        this.fx.setAlpha(this._abAlpha);
     }
 
     _refreshCard(slotIdx, id) {

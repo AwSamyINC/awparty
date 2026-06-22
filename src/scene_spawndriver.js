@@ -44,7 +44,9 @@ MainScene.prototype._updatePhaseProgression = function(dt, px, py) {
                 const bp = findSpawnPos(px, py, C.ARENA_WIDTH, C.ARENA_HEIGHT, 800);
                 const bx = bp.x, by = bp.y;
                 const boss2 = new Enemy(this, bx, by, this._boss2Key);
-                boss2.makeBoss2(this._boss2Key);
+                // Глава с boss2Type:'BASS' — носорог-сабвуфер; иначе обычный B2-дашер.
+                if (this.chapter && this.chapter.boss2Type === 'BASS') boss2.makeBossBass(this._boss2Key);
+                else boss2.makeBoss2(this._boss2Key);
                 this._applyChapterBoss(boss2);
                 if (s.isHardcoreMode) { boss2.speed *= 1.5; boss2.hp *= 2; boss2.maxHp *= 2; }
                 this.enemies.push(boss2);

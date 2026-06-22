@@ -148,14 +148,15 @@ MainScene.prototype.drawWorldFx = function() {
                 g.fillCircle(tx[p], ty[p], 8 * ratio);
             }
         }
-        // Кольцо Ground Slam
+        // Кольцо-ударная волна (УДАР ОЗЕМЬ / ЗВУКОВАЯ ВОЛНА). Цвет/радиус задаются при активации;
+        // фолбэк — оранжевый слэм.
         if (this.slamRingTimer >= 0) {
             const t = this.slamRingTimer / C.SLAM_RING_DURATION;
-            const r = C.SLAM_RADIUS * t;
+            const r = (this.slamRingRadius || C.SLAM_RADIUS) * t;
             const alpha = (1 - t * t);
-            g.lineStyle(8, rgb(255, 160, 0), alpha * 0.5);
+            g.lineStyle(8, this.slamRingColor || rgb(255, 160, 0), alpha * 0.5);
             g.strokeCircle(this.slamRingCenter.x, this.slamRingCenter.y, r + 6);
-            g.lineStyle(3, rgb(255, 220, 80), alpha);
+            g.lineStyle(3, this.slamRingColor2 || rgb(255, 220, 80), alpha);
             g.strokeCircle(this.slamRingCenter.x, this.slamRingCenter.y, r);
         }
         // Звуковые волны Сабвуфера: сектор 90° + дуга-фронт (циан).

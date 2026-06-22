@@ -308,6 +308,7 @@ class Enemy {
         this.isBoss2 = false;
         this.isBoss3 = false;
         this.isBossDoc = false;
+        this.isBossBass = false;
 
         // STROBE (босс 3 этапа) — собственный конечный автомат и параметры атак
         this.strobeState = 'ROAM';   // ROAM | TELEGRAPH | EXECUTE | RECOVER
@@ -486,6 +487,26 @@ class Enemy {
         this.spawnStyle = 'bossdoc'; this.spawnDuration = C.SPAWN.BOSSDOC_DURATION; // зелёный свет
     }
 
+    // Босс BASS (этап 2, глава 2): носорог-сабвуфер. isBoss2 — чтобы смерть обработалась
+    // как босс этапа 2 (см. handleEnemyDeaths); isBossBass — свой AI и уникальная душа.
+    // Поведение/тайминги — _updateBossBass + C.BOSSBASS.
+    makeBossBass(texKey) {
+        const st = C.BOSS.BB;
+        this.isBoss = true; this.isBoss2 = true; this.isBossBass = true;
+        this.type = EnemyType.BOSS;
+        if (texKey) { this.sprite.setTexture(texKey); this.sprite.setOrigin(0.5, 0.5); }
+        this.baseScale = C.ENEMY.BASE_SIZE / this.sprite.width;
+        this.hp = st.hp; this.maxHp = st.hp; this.speed = st.speed; this.damage = st.damage;
+        this.bossScale = this.baseScale * st.scale;
+        this.sprite.setScale(this.bossScale, this.bossScale);
+        this.waveRadiusMult = C.BOSSBASS.WAVE_RADIUS_MULT; // волна баса крупнее обычной
+        this.bassState = 'CHASE';
+        this.bassTimer = 0;
+        this.bassNextRush = false;            // чередование волна/разгон
+        this.rushDir = { x: 1, y: 0 };
+        this.spawnStyle = 'boss1'; this.spawnDuration = C.SPAWN.BOSS1_DURATION; // тяжёлый вход
+    }
+
     // Конечный автомат STROBE: ROAM -> TELEGRAPH -> EXECUTE -> RECOVER, по кругу.
     // Атаки чередуются: 0 = вращающийся лазер, 1 = стробо-веер, 2 = затемнение+телепорт.
     // В ярости (HP<=50%) все фазы быстрее, веер даёт лишнее кольцо.
@@ -652,6 +673,76 @@ class Enemy {
         }
     }
 
+    // Босс BASS: погоня (контактный урон даёт сцена) → волна баса вблизи / «носорожий»
+    // разгон по прямой (атаки чередуются) → восстановление. Волну создаёт сцена по
+    // justSoundWave (× waveRadiusMult). При ударе в стену разгон обрывается с тряской.
+    _updateBossBass(dt, px, py, arenaW, arenaH) {
+        const s = this.sprite;
+        this.justSoundWave = false;
+        this.justFiredVolley = false;
+        const bs = this.bossScale || this.baseScale * 3.2;
+        const BB = C.BOSSBASS;
+        const tf = (this.hp <= this.maxHp / 2) ? 0.7 : 1.0; // в ярости тайминги быстрее
+
+        if (this.bassState === 'CHASE') {
+            const dir = normalize(px - s.x, py - s.y);
+            s.x += dir.x * this.speed * dt;
+            s.y += dir.y * this.speed * dt;
+            this.walkTimer += dt * 8;
+            const bob = Math.sin(this.walkTimer * 1.7) * 0.06;
+            s.setScale(bs * (1 - bob * 0.4), bs * (1 + bob));
+            s.angle = Math.sin(this.walkTimer) * 4;
+            this.bassTimer += dt;
+            if (this.bassTimer >= BB.ATTACK_GAP * tf) {
+                this.bassTimer = 0; s.angle = 0; s.setScale(bs, bs);
+                const dq = distSq(s.x, s.y, px, py);
+                const inWave = dq <= BB.WAVE_RANGE * BB.WAVE_RANGE;
+                if (inWave && !this.bassNextRush) {
+                    this.bassState = 'WAVE_CHARGE';
+                } else {
+                    this.bassState = 'RUSH_WINDUP';
+                    this.rushDir = normalize(px - s.x, py - s.y);
+                }
+                this.bassNextRush = !this.bassNextRush; // чередуем волну/разгон
+            }
+        } else if (this.bassState === 'WAVE_CHARGE') {
+            this.bassTimer += dt;
+            const k = clamp(this.bassTimer / (BB.WAVE_TELEGRAPH * tf), 0, 1);
+            const pulse = 1 + 0.25 * k + 0.05 * Math.sin(this.bassTimer * 40);
+            s.setScale(bs * pulse, bs * pulse);
+            s.angle = Math.sin(this.bassTimer * 45) * 4;
+            if (this.bassTimer >= BB.WAVE_TELEGRAPH * tf) {
+                this.justSoundWave = true; // сцена создаст волну к игроку
+                this.bassState = 'RECOVER'; this.bassTimer = 0; s.angle = 0; s.setScale(bs, bs);
+            }
+        } else if (this.bassState === 'RUSH_WINDUP') {
+            this.bassTimer += dt;
+            s.angle = Math.sin(this.bassTimer * 50) * 6; // дрожь замаха
+            s.setScale(bs * 1.05, bs * 0.95);
+            if (this.bassTimer >= BB.RUSH_WINDUP * tf) { this.bassState = 'RUSH'; this.bassTimer = 0; s.angle = 0; }
+        } else if (this.bassState === 'RUSH') {
+            this.bassTimer += dt;
+            const accel = clamp(this.bassTimer / (BB.RUSH_DURATION * tf), 0, 1);
+            const spd = BB.RUSH_SPEED * (0.4 + 0.6 * accel); // разгон с ускорением
+            const m = 80;
+            const nx = s.x + this.rushDir.x * spd * dt, ny = s.y + this.rushDir.y * spd * dt;
+            const hitWall = (nx < m || nx > arenaW - m || ny < m || ny > arenaH - m);
+            s.x = clamp(nx, m, arenaW - m);
+            s.y = clamp(ny, m, arenaH - m);
+            s.setScale(bs * 1.1, bs * 0.92); // вытянут вперёд
+            if (hitWall || this.bassTimer >= BB.RUSH_DURATION * tf) {
+                if (hitWall) this.scene.triggerShake(0.3, 26);
+                this.bassState = 'RECOVER';
+                this.bassTimer = hitWall ? -0.4 : 0; // удар в стену → дольше оглушён
+                s.setScale(bs, bs);
+            }
+        } else { // RECOVER
+            this.bassTimer += dt;
+            s.setScale(bs, bs); s.angle = 0;
+            if (this.bassTimer >= BB.RECOVER * tf) { this.bassState = 'CHASE'; this.bassTimer = 0; }
+        }
+    }
+
     // Анимация появления (инертная фаза). На первом тике запоминаем целевой масштаб/позицию
     // (их уже выставил конструктор/make*), затем гоняем прогресс k∈[0..1] по spawnStyle.
     // Сами телеграфы/кольца/лучи рисует сцена в _drawSpawnFx по этому же состоянию.
@@ -789,6 +880,8 @@ class Enemy {
             this._updateStrobe(dt, px, py);
         } else if (this.type === EnemyType.BOSS && this.isBossDoc) {
             this._updateBossDoctor(dt, px, py, arenaW, arenaH);
+        } else if (this.type === EnemyType.BOSS && this.isBossBass) {
+            this._updateBossBass(dt, px, py, arenaW, arenaH);
         } else if (this.type === EnemyType.BOSS) {
             this.justFiredVolley = false;
             const bs = this.bossScale || this.baseScale * 3; // базовый масштаб для анимации/сброса
@@ -1157,6 +1250,10 @@ class BossSoul {
             this.sprite.setTint(rgb(200 + 55 * pulse, 50, 100 + 155 * pulse));
         } else if (this.soulType === 3) {
             this.sprite.setTint(rgb(0, 200 + 55 * pulse, 255)); // STROBE — циан
+        } else if (this.soulType === 4) {
+            this.sprite.setTint(rgb(40, 200 + 55 * pulse, 110)); // ЧЕРЕП (Доктор) — зелёный
+        } else if (this.soulType === 5) {
+            this.sprite.setTint(rgb(40, 120 + 80 * pulse, 255)); // ЗВУКОВАЯ ВОЛНА (BASS) — синий
         } else {
             this.sprite.setTint(rgb(80 + 120 * pulse, 30 * pulse, 255));
         }
@@ -1166,10 +1263,84 @@ class BossSoul {
         this.glow.x = this.sprite.x;
         this.glow.y = this.sprite.y;
         const a = (25 + 20 * gp) / 255;
-        this.glow.setFillStyle(this.soulType === 1 ? rgb(200, 0, 180) : this.soulType === 3 ? rgb(0, 220, 255) : rgb(100, 0, 255), a);
+        this.glow.setFillStyle(this.soulType === 1 ? rgb(200, 0, 180) : this.soulType === 3 ? rgb(0, 220, 255) : this.soulType === 4 ? rgb(40, 220, 110) : this.soulType === 5 ? rgb(40, 130, 255) : rgb(100, 0, 255), a);
     }
 
     destroy() { this.sprite.destroy(); this.glow.destroy(); }
+}
+
+// ----------------------------------------------------------------------------
+// SkullProjectile — снаряд способности «ЧЕРЕП» (id 4). Летит к курсору, наводится на
+// ближайшего ещё не задетого врага и бьёт по цепочке до C.ABILITY.SKULL_MAX_HITS целей;
+// урон растёт на SKULL_BOUNCE_BONUS за каждый отскок. Управляется сценой (массив skulls).
+// ----------------------------------------------------------------------------
+class SkullProjectile {
+    constructor(scene, x, y, dirx, diry, firstTarget) {
+        this.scene = scene;
+        this.x = x; this.y = y;
+        const n = normalize(dirx, diry);
+        this.vx = n.x; this.vy = n.y;        // единичное направление полёта
+        this.target = firstTarget || null;   // первая цель — ближайшая к курсору (прицел игрока)
+        this.hitIds = [];                     // _id уже задетых врагов (не бьём дважды)
+        this.hitsDone = 0;
+        this.life = C.ABILITY.SKULL_LIFETIME;
+        this.dead = false;
+        this.spin = 0;
+        this.sprite = scene.addWorld(scene.add.sprite(x, y, 'ability_skull'));
+        this.sprite.setOrigin(0.5, 0.5);
+        this.sprite.setDisplaySize(C.ABILITY.SKULL_SIZE, C.ABILITY.SKULL_SIZE);
+        this.sprite.setDepth(15);
+    }
+
+    _nearestTarget() {
+        let best = null, bestD = C.ABILITY.SKULL_SEEK_RADIUS * C.ABILITY.SKULL_SEEK_RADIUS;
+        for (const e of this.scene.enemies) {
+            if (e.hp <= 0 || e.spawning) continue;
+            if (this.hitIds.indexOf(e._id) !== -1) continue;
+            const dq = distSq(this.x, this.y, e.sprite.x, e.sprite.y);
+            if (dq < bestD) { bestD = dq; best = e; }
+        }
+        return best;
+    }
+
+    update(dt) {
+        this.life -= dt;
+        if (this.life <= 0) { this.dead = true; return; }
+        // Текущая цель невалидна (мертва/спавнится/уже задета)? — берём ближайшую не задетую.
+        if (!this.target || this.target.hp <= 0 || this.target.spawning || this.hitIds.indexOf(this.target._id) !== -1) {
+            this.target = this._nearestTarget();
+        }
+        if (this.target) { // наведение прямо на цель — надёжная цепочка отскоков
+            const n = normalize(this.target.sprite.x - this.x, this.target.sprite.y - this.y);
+            this.vx = n.x; this.vy = n.y;
+        }
+        const sp = C.ABILITY.SKULL_SPEED;
+        this.x += this.vx * sp * dt;
+        this.y += this.vy * sp * dt;
+        this.spin += dt * 10;
+        this.sprite.setPosition(this.x, this.y);
+        this.sprite.angle = Math.sin(this.spin) * 14;
+        if (this.target) {
+            const hr = C.ABILITY.SKULL_HIT_RADIUS;
+            if (distSq(this.x, this.y, this.target.sprite.x, this.target.sprite.y) < hr * hr) this._hit(this.target);
+        }
+        if (this.x < -150 || this.y < -150 || this.x > C.ARENA_WIDTH + 150 || this.y > C.ARENA_HEIGHT + 150) this.dead = true;
+    }
+
+    _hit(e) {
+        const A = C.ABILITY;
+        const base = this.scene.player.attackDamage * A.SKULL_DAMAGE_MULT;
+        const dmg = Math.max(1, Math.round(base * (1 + A.SKULL_BOUNCE_BONUS * this.hitsDone)));
+        e.hp -= dmg; e.hitFlashTimer = 0.12;
+        this.scene.dmgTexts.push(this.scene.spawnDamageText(e.sprite.x, e.sprite.y, dmg, this.hitsDone > 0));
+        for (let i = 0; i < 8; i++) this.scene.particles.push(this.scene.spawnParticle(this.x, this.y, (i & 1) ? rgb(120, 255, 150) : rgb(220, 255, 220)));
+        this.hitIds.push(e._id);
+        this.hitsDone++;
+        this.target = null; // следующая цель выберется в следующем кадре
+        if (this.hitsDone >= A.SKULL_MAX_HITS) this.dead = true;
+    }
+
+    destroy() { this.sprite.destroy(); }
 }
 
 // ----------------------------------------------------------------------------

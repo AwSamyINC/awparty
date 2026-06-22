@@ -102,6 +102,8 @@ const I18N = {
         ability_desc_1: 'Slam the ground to\ndamage and knock back\nnearby enemies.',
         ability_desc_2: 'Unleash 12 vinyl discs\nin all directions.',
         ability_desc_3: 'Fire a piercing laser\nbeam toward the cursor.',
+        ability_desc_4: 'Hurl a skull that ricochets\nthrough 5 enemies,\n+20% damage per bounce.',
+        ability_desc_5: 'Emit a sonic wave that\nknocks back and damages\nall nearby enemies.',
 
         // --- Тосты апгрейдов над игроком ---
         upgrade_toasts: ['UPGRADE: Fire Rate +', 'UPGRADE: Damage +', 'UPGRADE: Speed +', 'UPGRADE: Magnet +', 'UPGRADE: Max HP +1', 'UNLOCKED: Blademail', 'UNLOCKED: Pierce Shot'],
@@ -122,7 +124,7 @@ const I18N = {
         card_legendary: '★ LEGENDARY ★',
 
         // --- Способности ---
-        ability_names: ['INVINCIBILITY', 'GROUND SLAM', 'DISC STORM', 'LASER'],
+        ability_names: ['INVINCIBILITY', 'GROUND SLAM', 'DISC STORM', 'LASER', 'SKULL', 'SONIC WAVE'],
 
         // --- Магазин: дерево навыков ---
         shop_skilltree: 'SKILL TREE',
@@ -323,6 +325,8 @@ const I18N = {
         ability_desc_1: 'Удар по земле:\nурон и отбрасывание\nближних врагов.',
         ability_desc_2: 'Выпустить 12 дисков\nво все стороны.',
         ability_desc_3: 'Выпустить пробивающий\nлуч в сторону курсора.',
+        ability_desc_4: 'Запустить череп: рикошет\nпо 5 врагам, +20% урона\nза каждый отскок.',
+        ability_desc_5: 'Звуковая волна: отбрасывает\nи бьёт всех врагов\nвокруг.',
 
         // --- Тосты апгрейдов над игроком ---
         upgrade_toasts: ['УЛУЧШЕНИЕ: Скорострельность +', 'УЛУЧШЕНИЕ: Урон +', 'УЛУЧШЕНИЕ: Скорость +', 'УЛУЧШЕНИЕ: Магнит +', 'УЛУЧШЕНИЕ: Макс. HP +1', 'ОТКРЫТО: Блейдмейл', 'ОТКРЫТО: Прострел'],
@@ -343,7 +347,7 @@ const I18N = {
         card_legendary: '★ ЛЕГЕНДАРНАЯ ★',
 
         // --- Способности ---
-        ability_names: ['НЕУЯЗВИМОСТЬ', 'УДАР ОЗЕМЬ', 'ВИХРЬ ДИСКОВ', 'ЛАЗЕР'],
+        ability_names: ['НЕУЯЗВИМОСТЬ', 'УДАР ОЗЕМЬ', 'ВИХРЬ ДИСКОВ', 'ЛАЗЕР', 'ЧЕРЕП', 'ЗВУКОВАЯ ВОЛНА'],
 
         // --- Магазин: дерево навыков ---
         shop_skilltree: 'ДЕРЕВО НАВЫКОВ',

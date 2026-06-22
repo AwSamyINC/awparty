@@ -72,6 +72,7 @@ class MainScene extends Phaser.Scene {
         this.particles = [];
         this.dmgTexts = [];
         this.bossSouls = [];
+        this.skulls = [];     // активные снаряды способности «ЧЕРЕП» (id 4)
         this.soundWaves = []; // направленные звуковые волны Сабвуфера (отбрасывают игрока)
 
         // Пулы переиспользуемых объектов (снижают нагрузку на GC)
@@ -464,6 +465,7 @@ class MainScene extends Phaser.Scene {
         // Очистка сущностей (пулируемые — в пул, остальные — уничтожаем)
         this._clearArr(this.enemies);
         this._clearArr(this.bossSouls);
+        this._clearArr(this.skulls);
         this._releaseAll(this.bullets, 'bullet');
         this._releaseAll(this.enemyProjectiles, 'eproj');
         this._releaseAll(this.gems, 'gem');
@@ -664,6 +666,10 @@ class MainScene extends Phaser.Scene {
 
         for (const b of this.bullets) b.update(dt);
 
+        // Снаряды «ЧЕРЕП» (id 4): наведение/отскоки/урон внутри самого снаряда.
+        for (const sk of this.skulls) sk.update(dt);
+        this._filterDestroy(this.skulls, sk => sk.dead);
+
         // Аура Хайпмена: +HP/реген союзникам в радиусе (до обновления врагов).
         this._updateHypeAuras(dt);
 
@@ -692,7 +698,7 @@ class MainScene extends Phaser.Scene {
                 this.soundWaves.push({
                     x: e.sprite.x, y: e.sprite.y,
                     angle: Math.atan2(py - e.sprite.y, px - e.sprite.x),
-                    radius: 0, maxRadius: SW.WAVE_RADIUS, halfArc: SW.WAVE_HALF_ARC,
+                    radius: 0, maxRadius: SW.WAVE_RADIUS * (e.waveRadiusMult || 1), halfArc: SW.WAVE_HALF_ARC,
                     timer: 0, hit: false, damage: e.damage,
                 });
                 // НЕ sfx_boss_warning: иначе на главе 2+ «сигнал босса» звучит при каждом
@@ -867,6 +873,8 @@ class MainScene extends Phaser.Scene {
                     soul.isCollected = true;
                     if (soul.soulType === 1) { this.pendingAbilityIds = [0, 1, -1]; this.pendingAbilityCount = 2; }
                     else if (soul.soulType === 3) { this.pendingAbilityIds = [3, -1, -1]; this.pendingAbilityCount = 1; }
+                    else if (soul.soulType === 4) { this.pendingAbilityIds = [4, -1, -1]; this.pendingAbilityCount = 1; } // ЧЕРЕП (Доктор)
+                    else if (soul.soulType === 5) { this.pendingAbilityIds = [5, -1, -1]; this.pendingAbilityCount = 1; } // ЗВУКОВАЯ ВОЛНА (BASS)
                     else { this.pendingAbilityIds = [2, -1, -1]; this.pendingAbilityCount = 1; }
                     this.pendingSlot = nextSlot;
                     this.abilitySelectAnimTimer = 0;
@@ -958,6 +966,7 @@ class MainScene extends Phaser.Scene {
             }
             this.slamRingCenter = { x: px, y: py };
             this.slamRingTimer = 0;
+            this.slamRingColor = rgb(255, 160, 0); this.slamRingColor2 = rgb(255, 220, 80); this.slamRingRadius = C.SLAM_RADIUS;
             this.triggerShake(0.4, 30);
             this.audio.play('sfx_slam', { volume: 0.8 });
         } else if (id === 2) {
@@ -988,6 +997,48 @@ class MainScene extends Phaser.Scene {
             this.playerBeam = { x: px, y: py, nx: n.x, ny: n.y, len: len, timer: 0.28 };
             this.triggerShake(0.2, 22);
             this.audio.play('sfx_slam', { volume: 0.5 });
+        } else if (id === 4) {
+            // ЧЕРЕП: направленный снаряд-рикошет в сторону курсора.
+            const ptr = this.input.activePointer;
+            const wp = this.cameras.main.getWorldPoint(ptr.x, ptr.y);
+            let dx = wp.x - px, dy = wp.y - py;
+            if (dx * dx + dy * dy < 1e-6) { dx = 1; dy = 0; }
+            // Первая цель — ближайший враг к точке курсора (учёт прицела игрока).
+            let first = null, bestD = C.ABILITY.SKULL_SEEK_RADIUS * C.ABILITY.SKULL_SEEK_RADIUS;
+            for (const e of this.enemies) {
+                if (e.hp <= 0 || e.spawning) continue;
+                const dq = distSq(wp.x, wp.y, e.sprite.x, e.sprite.y);
+                if (dq < bestD) { bestD = dq; first = e; }
+            }
+            this.skulls.push(new SkullProjectile(this, px, py, dx, dy, first));
+            this.audio.play('sfx_slam', { volume: 0.5 });
+        } else if (id === 5) {
+            // ЗВУКОВАЯ ВОЛНА: круговой импульс — отброс наружу + урон врагам в радиусе.
+            const SR = C.ABILITY.SONIC_RADIUS, dmg = C.ABILITY.SONIC_DAMAGE, kb = C.ABILITY.SONIC_KNOCKBACK;
+            for (const e of this.enemies) {
+                if (e.spawning) continue;
+                const dq = distSq(e.sprite.x, e.sprite.y, px, py);
+                if (dq < SR * SR && dq > 0.001) {
+                    e.hp -= dmg; e.hitFlashTimer = 0.12;
+                    const d = Math.sqrt(dq);
+                    e.sprite.x = clamp(e.sprite.x + (e.sprite.x - px) / d * kb, 0, C.ARENA_WIDTH);
+                    e.sprite.y = clamp(e.sprite.y + (e.sprite.y - py) / d * kb, 0, C.ARENA_HEIGHT);
+                    this.dmgTexts.push(this.spawnDamageText(e.sprite.x, e.sprite.y, dmg, false));
+                }
+            }
+            for (let i = 0; i < 50; i++) {
+                const angle = randInt(360) * Math.PI / 180;
+                const part = this.spawnParticle(px, py, randInt(2) === 0 ? rgb(0, 230, 255) : rgb(120, 200, 255));
+                const spd = randInt(400) + 250;
+                part.vx = Math.cos(angle) * spd; part.vy = Math.sin(angle) * spd;
+                part.maxLifetime = 0.5; part.lifetime = 0.5;
+                this.particles.push(part);
+            }
+            this.slamRingCenter = { x: px, y: py };
+            this.slamRingTimer = 0;
+            this.slamRingColor = rgb(0, 160, 255); this.slamRingColor2 = rgb(150, 230, 255); this.slamRingRadius = SR;
+            this.triggerShake(0.35, 26);
+            this.audio.play('sfx_slam', { volume: 0.7 });
         }
         this.abilityCooldowns[slot] = ABILITY_COOLDOWNS[id] || 1;
         this.abilityMaxCooldowns[slot] = this.abilityCooldowns[slot];

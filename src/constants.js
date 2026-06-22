@@ -44,6 +44,21 @@ const C = {
         LASER_DAMAGE: 60,              // урон луча
         LASER_HIT_RADIUS: 45,          // радиус попадания по обычному врагу (px)
         LASER_BOSS_HIT_RADIUS: 150,    // радиус попадания по боссу (px)
+        // ЧЕРЕП (id 4, душа Доктора гл.2): направленный снаряд-рикошет. Урон за попадание =
+        // attackDamage игрока × (SKULL_DAMAGE_MULT + SKULL_BOUNCE_BONUS × номер_отскока).
+        SKULL_DAMAGE_MULT: 1.0,        // базовый множитель урона (100% от атаки игрока)
+        SKULL_BOUNCE_BONUS: 0.2,       // +20% урона за каждый следующий отскок
+        SKULL_MAX_HITS: 5,             // макс. целей (1-я цель + 4 отскока)
+        SKULL_SPEED: 950,              // скорость полёта, px/с
+        SKULL_SEEK_RADIUS: 750,        // радиус поиска следующей цели, px
+        SKULL_HIT_RADIUS: 60,          // дистанция засчитывания попадания, px
+        SKULL_LIFETIME: 2.5,           // макс. время жизни (если цели кончились), сек
+        SKULL_SIZE: 64,                // размер спрайта снаряда, px
+        // ЗВУКОВАЯ ВОЛНА (id 5, душа босса BASS): круговой импульс вокруг игрока —
+        // отбрасывает и бьёт всех врагов в радиусе.
+        SONIC_DAMAGE: 25,              // урон по каждому врагу в радиусе
+        SONIC_RADIUS: 420,             // радиус действия, px
+        SONIC_KNOCKBACK: 450,          // отброс врагов наружу, px
     },
 
     // STROBE (босс 3 этапа): урон лазерного луча и допуск ширины при попадании по игроку.
@@ -113,6 +128,21 @@ const C = {
         B3: { hp: 180, speed: 140, damage: 40, scale: 3.2 },
         // Босс-доктор (этап 1, глава 2). hp = B3 (180); поведение — в C.BOSSDOC.
         BD: { hp: 180, speed: 110, damage: 50, scale: 3.2 },
+        // Босс BASS (этап 2, глава 2): носорог-сабвуфер. Поведение — в C.BOSSBASS.
+        BB: { hp: 130, speed: 150, damage: 60, scale: 3.5 },
+    },
+
+    // Босс BASS (этап 2, глава 2): погоня с контактным уроном + волна баса вблизи +
+    // «носорожий» разгон по прямой. Конечный автомат — Enemy._updateBossBass.
+    BOSSBASS: {
+        WAVE_RANGE: 520,        // дистанция до игрока, в которой выбирается волна (иначе разгон)
+        WAVE_TELEGRAPH: 0.6,    // замах перед волной, сек
+        WAVE_RADIUS_MULT: 1.8,  // волна шире обычной (× SUBWOOFER.WAVE_RADIUS)
+        RUSH_WINDUP: 0.8,       // замах перед разгоном, сек
+        RUSH_DURATION: 0.7,     // длительность разгона, сек
+        RUSH_SPEED: 1500,       // макс. скорость разгона, px/с (растёт по ходу)
+        RECOVER: 1.0,           // восстановление после атаки (босс уязвим), сек
+        ATTACK_GAP: 1.2,        // погоня между атаками, сек
     },
 
     // Анимация появления: пока spawnTimer < длительности, юнит инертен (не двигается,
@@ -205,7 +235,7 @@ const CHAPTERS = [
     { id: 2, hue: 0xc800ff,
       floorKey: 'floor2', floorTint: 0x9a6cff, floorMode: 'stretch',
       enemyKey: 'enemy2', goblinKey: 'enemyV2', subwooferKey: 'enemy2_sub', mosherKey: 'enemy2_mosher', hypemanKey: 'enemy2_hype',
-      boss1Key: 'c2_boss1', boss2Key: 'c2_boss2', boss3Key: 'c2_boss3', boss1Type: 'DOCTOR', encircleEvent: true,
+      boss1Key: 'c2_boss1', boss2Key: 'c2_boss2', boss3Key: 'c2_boss3', boss1Type: 'DOCTOR', boss2Type: 'BASS', encircleEvent: true,
       hpMult: 1.6, dmgMult: 1.35, spawnMult: 1.2, bossHpMult: 1.8 },
     { id: 3, hue: 0xff5050,
       floorKey: 'floor3', floorTint: 0xff6464, floorMode: 'stretch',
@@ -252,8 +282,8 @@ const LEGENDARY_UPGRADE_IDS = [5, 6];
 const LEGENDARY_CARD_CHANCE = 0.13;
 
 // Ability data (AbilitySelectUI.cpp). Названия — в i18n.js: ability_names.
-const ABILITY_COOLDOWNS = { 0: 25, 1: 15, 2: 12, 3: 14 };
-const ABILITY_ICONS = { '-10': 'ability_dash', 0: 'ability_invincible', 1: 'ability_slam', 2: 'ability_disc', 3: 'ability_laser' };
+const ABILITY_COOLDOWNS = { 0: 25, 1: 15, 2: 12, 3: 14, 4: 16, 5: 14 };
+const ABILITY_ICONS = { '-10': 'ability_dash', 0: 'ability_invincible', 1: 'ability_slam', 2: 'ability_disc', 3: 'ability_laser', 4: 'ability_skull', 5: 'ability_sonic' };
 
 // Artifact info (ShopUI.cpp)
 const ARTIFACTS = [
@@ -326,6 +356,8 @@ const TEXTURE_MANIFEST = [
     ['ability_invincible', 'Invincibility.png'],
     ['ability_slam', 'ground_slam.png'],
     ['ability_disc', 'disc_storm.png'],
+    ['ability_skull', 'ability_skull.png'],
+    ['ability_sonic', 'ability_sonic.png'],
     ['icon_fire', 'icon_fire.png'],
     ['icon_dmg', 'icon_dmg.png'],
     ['icon_speed', 'icon_speed.png'],

@@ -171,7 +171,8 @@ MainScene.prototype.handleEnemyDeaths = function(px, py) {
             } else if (e.isBoss2) {
                 this.triggerShake(0.8, 60);
                 this.audio.play('sfx_boss_death', { volume: 1 });
-                this.bossSouls.push(new BossSoul(this, ex, ey, 2));
+                // Босс BASS роняет уникальную душу → ЗВУКОВАЯ ВОЛНА (type 5); обычный B2 — ВИХРЬ (type 2).
+                this.bossSouls.push(new BossSoul(this, ex, ey, e.isBossBass ? 5 : 2));
                 for (let k = 0; k < 17; k++) {
                     this.gems.push(this.spawnGem(ex + randInt(150) - 75, ey + randInt(150) - 75));
                     this.coins.push(this.spawnCoin(ex + randInt(150) - 75, ey + randInt(150) - 75));
@@ -185,7 +186,9 @@ MainScene.prototype.handleEnemyDeaths = function(px, py) {
                     this.coins.push(this.spawnCoin(ex + randInt(150) - 75, ey + randInt(150) - 75));
                 }
                 for (let k = 0; k < 2; k++) this.vinyls.push(this.spawnVinyl(ex + randInt(80) - 40, ey + randInt(80) - 40));
-                this.bossSouls.push(new BossSoul(this, ex, ey, 1));
+                // Доктор (1-й босс гл.2) роняет уникальную душу → способность ЧЕРЕП (type 4);
+                // прочие первые боссы — обычная душа (НЕУЯЗВИМОСТЬ/УДАР, type 1).
+                this.bossSouls.push(new BossSoul(this, ex, ey, e.isBossDoc ? 4 : 1));
                 this._firstBossKilled = true; // первый босс убит — смерть теперь засчитывается в топ
                 if (this.gamePhase === GamePhase.PHASE_1) this.gamePhase = GamePhase.CLEARING;
             } else {

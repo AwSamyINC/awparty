@@ -73,6 +73,7 @@ class MainScene extends Phaser.Scene {
         this.dmgTexts = [];
         this.bossSouls = [];
         this.skulls = [];     // активные снаряды способности «ЧЕРЕП» (id 4)
+        this.bombs = [];      // активные заряды способности «РАСКОЛ» (id 6)
         this.soundWaves = []; // направленные звуковые волны Сабвуфера (отбрасывают игрока)
 
         // Пулы переиспользуемых объектов (снижают нагрузку на GC)
@@ -466,6 +467,7 @@ class MainScene extends Phaser.Scene {
         this._clearArr(this.enemies);
         this._clearArr(this.bossSouls);
         this._clearArr(this.skulls);
+        this._clearArr(this.bombs);
         this._releaseAll(this.bullets, 'bullet');
         this._releaseAll(this.enemyProjectiles, 'eproj');
         this._releaseAll(this.gems, 'gem');
@@ -669,6 +671,10 @@ class MainScene extends Phaser.Scene {
         // Снаряды «ЧЕРЕП» (id 4): наведение/отскоки/урон внутри самого снаряда.
         for (const sk of this.skulls) sk.update(dt);
         this._filterDestroy(this.skulls, sk => sk.dead);
+
+        // Заряды «РАСКОЛ» (id 6): полёт к курсору и взрыв на осколки внутри снаряда.
+        for (const bm of this.bombs) bm.update(dt);
+        this._filterDestroy(this.bombs, bm => bm.dead);
 
         // Аура Хайпмена: +HP/реген союзникам в радиусе (до обновления врагов).
         this._updateHypeAuras(dt);
@@ -875,6 +881,7 @@ class MainScene extends Phaser.Scene {
                     else if (soul.soulType === 3) { this.pendingAbilityIds = [3, -1, -1]; this.pendingAbilityCount = 1; }
                     else if (soul.soulType === 4) { this.pendingAbilityIds = [4, -1, -1]; this.pendingAbilityCount = 1; } // ЧЕРЕП (Доктор)
                     else if (soul.soulType === 5) { this.pendingAbilityIds = [5, -1, -1]; this.pendingAbilityCount = 1; } // ЗВУКОВАЯ ВОЛНА (BASS)
+                    else if (soul.soulType === 6) { this.pendingAbilityIds = [6, -1, -1]; this.pendingAbilityCount = 1; } // РАСКОЛ (SPLIT)
                     else { this.pendingAbilityIds = [2, -1, -1]; this.pendingAbilityCount = 1; }
                     this.pendingSlot = nextSlot;
                     this.abilitySelectAnimTimer = 0;
@@ -1039,6 +1046,14 @@ class MainScene extends Phaser.Scene {
             this.slamRingColor = rgb(0, 160, 255); this.slamRingColor2 = rgb(150, 230, 255); this.slamRingRadius = SR;
             this.triggerShake(0.35, 26);
             this.audio.play('sfx_slam', { volume: 0.7 });
+        } else if (id === 6) {
+            // РАСКОЛ: бросок заряда в сторону курсора, взрыв на осколки (см. ShatterBomb).
+            const ptr = this.input.activePointer;
+            const wp = this.cameras.main.getWorldPoint(ptr.x, ptr.y);
+            let dx = wp.x - px, dy = wp.y - py;
+            if (dx * dx + dy * dy < 1e-6) { dx = 1; dy = 0; }
+            this.bombs.push(new ShatterBomb(this, px, py, dx, dy));
+            this.audio.play('sfx_slam', { volume: 0.5 });
         }
         this.abilityCooldowns[slot] = ABILITY_COOLDOWNS[id] || 1;
         this.abilityMaxCooldowns[slot] = this.abilityCooldowns[slot];

@@ -59,6 +59,12 @@ const C = {
         SONIC_DAMAGE: 25,              // урон по каждому врагу в радиусе
         SONIC_RADIUS: 420,             // радиус действия, px
         SONIC_KNOCKBACK: 450,          // отброс врагов наружу, px
+        // РАСКОЛ (id 6, душа босса SPLIT): заряд летит к курсору и взрывается на осколки-пули.
+        SHATTER_FRAGMENTS: 14,         // число осколков при взрыве
+        SHATTER_DAMAGE: 18,            // урон одного осколка
+        SHATTER_SPEED: 850,            // скорость полёта заряда, px/с
+        SHATTER_RANGE: 620,            // дистанция до взрыва (если не попал во врага), px
+        SHATTER_SIZE: 44,              // размер спрайта заряда, px
     },
 
     // STROBE (босс 3 этапа): урон лазерного луча и допуск ширины при попадании по игроку.
@@ -130,6 +136,8 @@ const C = {
         BD: { hp: 180, speed: 110, damage: 50, scale: 3.2 },
         // Босс BASS (этап 2, глава 2): носорог-сабвуфер. Поведение — в C.BOSSBASS.
         BB: { hp: 130, speed: 150, damage: 60, scale: 3.5 },
+        // Босс SPLIT (этап 3, глава 2): распадается на копии. База тира 0; тиры — в C.BOSSSPLIT.
+        BS: { hp: 220, speed: 180, damage: 60, scale: 3.2 },
     },
 
     // Босс BASS (этап 2, глава 2): погоня с контактным уроном + волна баса вблизи +
@@ -143,6 +151,22 @@ const C = {
         RUSH_SPEED: 1500,       // макс. скорость разгона, px/с (растёт по ходу)
         RECOVER: 1.0,           // восстановление после атаки (босс уязвим), сек
         ATTACK_GAP: 1.2,        // погоня между атаками, сек
+    },
+
+    // Босс SPLIT (этап 3, глава 2): «Распад». При смерти делится на копии следующего тира
+    // (1 → 2 → 6), берёт числом; копии быстро бегут к игроку, расталкивая обычных мобов.
+    // Каждый тир — меньше HP/урона/размера (см. TIERS). Логика — Enemy._updateBossSplit /
+    // handleEnemyDeaths. hpMult/dmgMult/scaleMult — доля от базы C.BOSS.BS.
+    BOSSSPLIT: {
+        SHOVE_RADIUS: 170,      // в этом радиусе копия расталкивает обычных мобов, px
+        SHOVE_FORCE: 300,       // сила расталкивания, px/с
+        CHARGE_BURST: 1.2,      // первые секунды после спавна — рывок к игроку, сек
+        CHARGE_MULT: 1.8,       // множитель скорости во время рывка
+        TIERS: [
+            { hpMult: 1.0,  dmgMult: 1.0, scaleMult: 1.0,  splits: 2 }, // тир 0 — главный
+            { hpMult: 0.45, dmgMult: 0.6, scaleMult: 0.65, splits: 3 }, // тир 1 — средние (×2)
+            { hpMult: 0.22, dmgMult: 0.4, scaleMult: 0.42, splits: 0 }, // тир 2 — мелкие (×6)
+        ],
     },
 
     // Анимация появления: пока spawnTimer < длительности, юнит инертен (не двигается,
@@ -235,7 +259,7 @@ const CHAPTERS = [
     { id: 2, hue: 0xc800ff,
       floorKey: 'floor2', floorTint: 0x9a6cff, floorMode: 'stretch',
       enemyKey: 'enemy2', goblinKey: 'enemyV2', subwooferKey: 'enemy2_sub', mosherKey: 'enemy2_mosher', hypemanKey: 'enemy2_hype',
-      boss1Key: 'c2_boss1', boss2Key: 'c2_boss2', boss3Key: 'c2_boss3', boss1Type: 'DOCTOR', boss2Type: 'BASS', encircleEvent: true,
+      boss1Key: 'c2_boss1', boss2Key: 'c2_boss2', boss3Key: 'c2_boss3', boss1Type: 'DOCTOR', boss2Type: 'BASS', boss3Type: 'SPLIT', encircleEvent: true,
       hpMult: 1.6, dmgMult: 1.35, spawnMult: 1.2, bossHpMult: 1.8 },
     { id: 3, hue: 0xff5050,
       floorKey: 'floor3', floorTint: 0xff6464, floorMode: 'stretch',
@@ -282,8 +306,8 @@ const LEGENDARY_UPGRADE_IDS = [5, 6];
 const LEGENDARY_CARD_CHANCE = 0.13;
 
 // Ability data (AbilitySelectUI.cpp). Названия — в i18n.js: ability_names.
-const ABILITY_COOLDOWNS = { 0: 25, 1: 15, 2: 12, 3: 14, 4: 16, 5: 14 };
-const ABILITY_ICONS = { '-10': 'ability_dash', 0: 'ability_invincible', 1: 'ability_slam', 2: 'ability_disc', 3: 'ability_laser', 4: 'ability_skull', 5: 'ability_sonic' };
+const ABILITY_COOLDOWNS = { 0: 25, 1: 15, 2: 12, 3: 14, 4: 16, 5: 14, 6: 15 };
+const ABILITY_ICONS = { '-10': 'ability_dash', 0: 'ability_invincible', 1: 'ability_slam', 2: 'ability_disc', 3: 'ability_laser', 4: 'ability_skull', 5: 'ability_sonic', 6: 'ability_shatter' };
 
 // Artifact info (ShopUI.cpp)
 const ARTIFACTS = [
@@ -358,6 +382,7 @@ const TEXTURE_MANIFEST = [
     ['ability_disc', 'disc_storm.png'],
     ['ability_skull', 'ability_skull.png'],
     ['ability_sonic', 'ability_sonic.png'],
+    ['ability_shatter', 'ability_shatter.png'],
     ['icon_fire', 'icon_fire.png'],
     ['icon_dmg', 'icon_dmg.png'],
     ['icon_speed', 'icon_speed.png'],

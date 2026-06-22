@@ -309,6 +309,7 @@ class Enemy {
         this.isBoss3 = false;
         this.isBossDoc = false;
         this.isBossBass = false;
+        this.isBossSplit = false;
 
         // STROBE (босс 3 этапа) — собственный конечный автомат и параметры атак
         this.strobeState = 'ROAM';   // ROAM | TELEGRAPH | EXECUTE | RECOVER
@@ -505,6 +506,27 @@ class Enemy {
         this.bassNextRush = false;            // чередование волна/разгон
         this.rushDir = { x: 1, y: 0 };
         this.spawnStyle = 'boss1'; this.spawnDuration = C.SPAWN.BOSS1_DURATION; // тяжёлый вход
+    }
+
+    // Босс SPLIT (этап 3, глава 2): тир 0 — главный; распад порождает копии тиров 1/2 (меньше
+    // HP/урона/размера). isBoss3 — чтобы считаться боссом этапа 3; isBossSplit — свой AI/распад/душа.
+    // Логика распада и завершения этапа — в handleEnemyDeaths. Поведение — _updateBossSplit.
+    makeBossSplit(texKey, tier) {
+        const base = C.BOSS.BS, T = C.BOSSSPLIT.TIERS[tier] || C.BOSSSPLIT.TIERS[0];
+        this.isBoss = true; this.isBoss3 = true; this.isBossSplit = true;
+        this.type = EnemyType.BOSS;
+        if (texKey) { this.sprite.setTexture(texKey); this.sprite.setOrigin(0.5, 0.5); }
+        this.baseScale = C.ENEMY.BASE_SIZE / this.sprite.width;
+        this.hp = Math.round(base.hp * T.hpMult); this.maxHp = this.hp;
+        this.speed = base.speed; this.damage = Math.round(base.damage * T.dmgMult);
+        this.bossScale = this.baseScale * base.scale * T.scaleMult;
+        this.sprite.setScale(this.bossScale, this.bossScale);
+        this.splitTier = tier;
+        this.splitCount = T.splits;          // на сколько копий распадётся (0 = не делится)
+        this.canSplit = T.splits > 0;
+        this.chargeTimer = C.BOSSSPLIT.CHARGE_BURST; // рывок к игроку первые секунды
+        if (tier === 0) { this.spawnStyle = 'boss1'; this.spawnDuration = C.SPAWN.BOSS1_DURATION; } // тяжёлый вход
+        else { this.spawning = false; } // копии появляются мгновенно из родителя
     }
 
     // Конечный автомат STROBE: ROAM -> TELEGRAPH -> EXECUTE -> RECOVER, по кругу.
@@ -743,6 +765,32 @@ class Enemy {
         }
     }
 
+    // Босс SPLIT: быстрый чейзер (берёт числом), после спавна короткий рывок к игроку;
+    // расталкивает обычных мобов на пути. Контактный урон даёт сцена. Распад — в handleEnemyDeaths.
+    _updateBossSplit(dt, px, py, arenaW, arenaH) {
+        const s = this.sprite, SPL = C.BOSSSPLIT;
+        if (this.chargeTimer > 0) this.chargeTimer -= dt;
+        const spd = this.speed * (this.chargeTimer > 0 ? SPL.CHARGE_MULT : 1);
+        const dir = normalize(px - s.x, py - s.y);
+        s.x = clamp(s.x + dir.x * spd * dt, 0, arenaW);
+        s.y = clamp(s.y + dir.y * spd * dt, 0, arenaH);
+        this.walkTimer += dt * 10;
+        const bob = Math.sin(this.walkTimer * 1.8) * 0.07;
+        s.setScale(this.bossScale * (1 - bob * 0.4), this.bossScale * (1 + bob));
+        s.angle = Math.sin(this.walkTimer) * 5;
+        // Расталкивание обычных мобов на пути (линию босса и спавнящихся не трогаем).
+        const R = SPL.SHOVE_RADIUS, F = SPL.SHOVE_FORCE;
+        for (const o of this.scene.enemies) {
+            if (o === this || o.isBoss || o.hp <= 0 || o.spawning) continue;
+            const dx = o.sprite.x - s.x, dy = o.sprite.y - s.y, dq = dx * dx + dy * dy;
+            if (dq < R * R && dq > 1) {
+                const d = Math.sqrt(dq);
+                o.sprite.x = clamp(o.sprite.x + (dx / d) * F * dt, 0, arenaW);
+                o.sprite.y = clamp(o.sprite.y + (dy / d) * F * dt, 0, arenaH);
+            }
+        }
+    }
+
     // Анимация появления (инертная фаза). На первом тике запоминаем целевой масштаб/позицию
     // (их уже выставил конструктор/make*), затем гоняем прогресс k∈[0..1] по spawnStyle.
     // Сами телеграфы/кольца/лучи рисует сцена в _drawSpawnFx по этому же состоянию.
@@ -876,6 +924,8 @@ class Enemy {
                 this.walkTimer += dt * 10;
                 s.angle = Math.sin(this.walkTimer) * 15;
             }
+        } else if (this.type === EnemyType.BOSS && this.isBossSplit) {
+            this._updateBossSplit(dt, px, py, arenaW, arenaH);
         } else if (this.type === EnemyType.BOSS && this.isBoss3) {
             this._updateStrobe(dt, px, py);
         } else if (this.type === EnemyType.BOSS && this.isBossDoc) {
@@ -1254,6 +1304,8 @@ class BossSoul {
             this.sprite.setTint(rgb(40, 200 + 55 * pulse, 110)); // ЧЕРЕП (Доктор) — зелёный
         } else if (this.soulType === 5) {
             this.sprite.setTint(rgb(40, 120 + 80 * pulse, 255)); // ЗВУКОВАЯ ВОЛНА (BASS) — синий
+        } else if (this.soulType === 6) {
+            this.sprite.setTint(rgb(255, 60 + 80 * pulse, 170)); // РАСКОЛ (SPLIT) — магента
         } else {
             this.sprite.setTint(rgb(80 + 120 * pulse, 30 * pulse, 255));
         }
@@ -1263,7 +1315,7 @@ class BossSoul {
         this.glow.x = this.sprite.x;
         this.glow.y = this.sprite.y;
         const a = (25 + 20 * gp) / 255;
-        this.glow.setFillStyle(this.soulType === 1 ? rgb(200, 0, 180) : this.soulType === 3 ? rgb(0, 220, 255) : this.soulType === 4 ? rgb(40, 220, 110) : this.soulType === 5 ? rgb(40, 130, 255) : rgb(100, 0, 255), a);
+        this.glow.setFillStyle(this.soulType === 1 ? rgb(200, 0, 180) : this.soulType === 3 ? rgb(0, 220, 255) : this.soulType === 4 ? rgb(40, 220, 110) : this.soulType === 5 ? rgb(40, 130, 255) : this.soulType === 6 ? rgb(255, 50, 170) : rgb(100, 0, 255), a);
     }
 
     destroy() { this.sprite.destroy(); this.glow.destroy(); }
@@ -1338,6 +1390,60 @@ class SkullProjectile {
         this.hitsDone++;
         this.target = null; // следующая цель выберется в следующем кадре
         if (this.hitsDone >= A.SKULL_MAX_HITS) this.dead = true;
+    }
+
+    destroy() { this.sprite.destroy(); }
+}
+
+// ----------------------------------------------------------------------------
+// ShatterBomb — снаряд способности «РАСКОЛ» (id 6). Летит прямо к курсору; при попадании во
+// врага / достижении дальности / выходе за арену взрывается на C.ABILITY.SHATTER_FRAGMENTS
+// осколков (обычные пули игрока), летящих во все стороны. Управляется сценой (массив bombs).
+// ----------------------------------------------------------------------------
+class ShatterBomb {
+    constructor(scene, x, y, dirx, diry) {
+        this.scene = scene;
+        this.x = x; this.y = y;
+        const n = normalize(dirx, diry);
+        this.vx = n.x; this.vy = n.y;
+        this.traveled = 0;
+        this.dead = false;
+        this.spin = 0;
+        this.sprite = scene.addWorld(scene.add.sprite(x, y, 'ability_shatter'));
+        this.sprite.setOrigin(0.5, 0.5);
+        this.sprite.setDisplaySize(C.ABILITY.SHATTER_SIZE, C.ABILITY.SHATTER_SIZE);
+        this.sprite.setDepth(15);
+    }
+
+    _hitsEnemy() {
+        for (const e of this.scene.enemies) {
+            if (e.hp <= 0 || e.spawning) continue;
+            const hr = 50 + (e.isBoss ? 90 : 0);
+            if (distSq(this.x, this.y, e.sprite.x, e.sprite.y) < hr * hr) return true;
+        }
+        return false;
+    }
+
+    update(dt) {
+        const A = C.ABILITY, step = A.SHATTER_SPEED * dt;
+        this.x += this.vx * step; this.y += this.vy * step; this.traveled += step;
+        this.spin += dt;
+        this.sprite.setPosition(this.x, this.y);
+        this.sprite.angle = this.spin * 540;
+        const out = (this.x < 0 || this.y < 0 || this.x > C.ARENA_WIDTH || this.y > C.ARENA_HEIGHT);
+        if (this.traveled >= A.SHATTER_RANGE || out || this._hitsEnemy()) this._burst();
+    }
+
+    _burst() {
+        this.dead = true;
+        const A = C.ABILITY, sc = this.scene, n = A.SHATTER_FRAGMENTS;
+        for (let i = 0; i < n; i++) {
+            const ang = (i / n) * Math.PI * 2;
+            sc.bullets.push(sc.spawnBullet(this.x, this.y, Math.cos(ang), Math.sin(ang), A.SHATTER_DAMAGE, false));
+        }
+        for (let i = 0; i < 16; i++) sc.particles.push(sc.spawnParticle(this.x, this.y, (i & 1) ? rgb(255, 60, 180) : rgb(180, 80, 255)));
+        sc.triggerShake(0.2, 16);
+        sc.audio.play('sfx_slam', { volume: 0.5 });
     }
 
     destroy() { this.sprite.destroy(); }

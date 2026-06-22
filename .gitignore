@@ -10,6 +10,7 @@ node_modules/
 test-results/
 playwright-report/
 playwright/.cache/
+.playwright-mcp/
 
 # ОС / редакторы
 # .vscode: локальная конфигурация редактора (вкл. c_cpp_properties.json с

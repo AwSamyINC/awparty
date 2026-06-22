@@ -148,6 +148,7 @@ class HUD {
             case 3: return 0x00e6ff;
             case 4: return 0x46ff8c;
             case 5: return 0x3ca0ff;
+            case 6: return 0xff3caa;
             default: return 0x3c374b;
         }
     }
@@ -160,6 +161,7 @@ class HUD {
             case 3: return 'ability_laser';
             case 4: return 'ability_skull';
             case 5: return 'ability_sonic';
+            case 6: return 'ability_shatter';
             default: return null;
         }
     }

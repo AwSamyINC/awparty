@@ -158,16 +158,38 @@ MainScene.prototype.handleEnemyDeaths = function(px, py) {
             for (let i = 0; i < particleCount; i++) this.particles.push(this.spawnParticle(ex, ey, randInt(2) === 0 ? c1 : c2));
 
             if (e.isBoss3) {
-                this._boss3Alive = false; // гейт спавна снова открыт (см. _updateSpawning)
-                this.triggerShake(0.8, 70);
                 this.audio.play('sfx_boss_death', { volume: 1 });
-                this.bossSouls.push(new BossSoul(this, ex, ey, 3));
-                for (let k = 0; k < 20; k++) {
-                    this.gems.push(this.spawnGem(ex + randInt(150) - 75, ey + randInt(150) - 75));
-                    this.coins.push(this.spawnCoin(ex + randInt(150) - 75, ey + randInt(150) - 75));
+                // Распадающийся босс: делится на копии следующего тира (в split[], как мошер).
+                if (e.isBossSplit && e.canSplit) {
+                    for (let i = 0; i < e.splitCount; i++) {
+                        const ang = (i / e.splitCount) * Math.PI * 2 + Math.random();
+                        const cx = clamp(ex + Math.cos(ang) * 70, 60, C.ARENA_WIDTH - 60);
+                        const cy = clamp(ey + Math.sin(ang) * 70, 60, C.ARENA_HEIGHT - 60);
+                        const c = new Enemy(this, cx, cy, this._boss3Key);
+                        c.makeBossSplit(this._boss3Key, e.splitTier + 1);
+                        this._applyChapterBoss(c);
+                        if (s.isHardcoreMode) { c.hp *= 2; c.maxHp *= 2; }
+                        split.push(c);
+                    }
                 }
-                for (let k = 0; k < 3; k++) this.vinyls.push(this.spawnVinyl(ex + randInt(80) - 40, ey + randInt(80) - 40));
-                this._startCrazyMode(); // 3-й босс мёртв — этап сходит с ума, открывается портал
+                // Финал боя боссов-3: смерть не делится и других живых боссов-3 не осталось.
+                // (копии этого кадра ещё в split[], не в enemies — поэтому не считаются живыми тут).
+                const isFinal = !(e.isBossSplit && e.canSplit) && !this.enemies.some(o => o !== e && o.isBoss3 && o.hp > 0);
+                // Тряска экрана: обычный босс-3 — всегда; «Распад» — только при первом убийстве
+                // (тир 0 распадается) и при смерти последней живой копии. Промежуточные копии не трясут.
+                if (!e.isBossSplit || e.splitTier === 0 || isFinal) this.triggerShake(0.8, 70);
+                if (isFinal && !this.crazyMode) {
+                    this._boss3Alive = false; // гейт спавна снова открыт (см. _updateSpawning)
+                    this.bossSouls.push(new BossSoul(this, ex, ey, e.isBossSplit ? 6 : 3));
+                    for (let k = 0; k < 20; k++) {
+                        this.gems.push(this.spawnGem(ex + randInt(150) - 75, ey + randInt(150) - 75));
+                        this.coins.push(this.spawnCoin(ex + randInt(150) - 75, ey + randInt(150) - 75));
+                    }
+                    for (let k = 0; k < 3; k++) this.vinyls.push(this.spawnVinyl(ex + randInt(80) - 40, ey + randInt(80) - 40));
+                    this._startCrazyMode(); // вся линия босса мертва — этап сходит с ума, открывается портал
+                } else {
+                    this._boss3Alive = true; // бой продолжается (живы копии)
+                }
             } else if (e.isBoss2) {
                 this.triggerShake(0.8, 60);
                 this.audio.play('sfx_boss_death', { volume: 1 });
@@ -205,7 +227,9 @@ MainScene.prototype.handleEnemyDeaths = function(px, py) {
 // Сколько очков даёт убийство врага e (боссы — больше).
 MainScene.prototype._scoreFor = function(e) {
         const S = C.SCORE;
-        if (e.isBoss3) return S.BOSS3;
+        // Копии распадающегося босса дают долю очков (тир 1 — 20%, тир 2 — 8%), чтобы числом
+        // не раздувать счёт; сам босс (тир 0) — полные очки.
+        if (e.isBoss3) return (e.isBossSplit && e.splitTier > 0) ? Math.round(S.BOSS3 * (e.splitTier === 1 ? 0.2 : 0.08)) : S.BOSS3;
         if (e.isBoss2) return S.BOSS2;
         if (e.isBoss) return S.BOSS1;
         if (e.type === EnemyType.GOBLIN) return S.GOBLIN;

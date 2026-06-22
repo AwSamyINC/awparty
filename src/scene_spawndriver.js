@@ -28,7 +28,9 @@ MainScene.prototype._updatePhaseProgression = function(dt, px, py) {
             if (this.phase3Timer >= 60 && !this.phase3BossSpawned) {
                 const bp = findSpawnPos(px, py, C.ARENA_WIDTH, C.ARENA_HEIGHT, 800);
                 const boss3 = new Enemy(this, bp.x, bp.y, this._boss3Key);
-                boss3.makeBoss3(this._boss3Key);
+                // Глава с boss3Type:'SPLIT' — распадающийся босс (тир 0); иначе STROBE.
+                if (this.chapter && this.chapter.boss3Type === 'SPLIT') boss3.makeBossSplit(this._boss3Key, 0);
+                else boss3.makeBoss3(this._boss3Key);
                 this._applyChapterBoss(boss3);
                 if (s.isHardcoreMode) { boss3.speed *= 1.3; boss3.hp *= 2; boss3.maxHp *= 2; }
                 this.enemies.push(boss3);

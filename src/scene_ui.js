@@ -577,7 +577,7 @@ MainScene.prototype._buildAbilitySelect = function() {
         const startX = W / 2 - totalW / 2;
         const cy = H / 2 + 20;
         const keyLabels = ['[Q]', '[E]', '[R]'];
-        const colHex = { 0: '#ffd700', 1: '#ff5000', 2: '#b400ff', 3: '#00e6ff', 4: '#46ff8c', 5: '#3ca0ff' };
+        const colHex = { 0: '#ffd700', 1: '#ff5000', 2: '#b400ff', 3: '#00e6ff', 4: '#46ff8c', 5: '#3ca0ff', 6: '#ff3caa' };
         this.abilityCards = [];
         for (let i = 0; i < count; i++) {
             const id = this.pendingAbilityIds[i];
@@ -601,6 +601,7 @@ MainScene.prototype._buildAbilitySelect = function() {
             else if (id === 3) desc = t('ability_desc_3') + '\n\n' + t('cooldown') + ': ' + cd + 's';
             else if (id === 4) desc = t('ability_desc_4') + '\n\n' + t('cooldown') + ': ' + cd + 's';
             else if (id === 5) desc = t('ability_desc_5') + '\n\n' + t('cooldown') + ': ' + cd + 's';
+            else if (id === 6) desc = t('ability_desc_6') + '\n\n' + t('cooldown') + ': ' + cd + 's';
             const descObj = this._mText(cx, cy - cardH / 2 + 295, desc, 22, '#c8c3dc', 0.5, 0, '#000', 2);
             const slot = this.pendingSlot;
             const keyObj = this._mText(cx, cy + cardH / 2 - 70, (slot >= 0 && slot < 3) ? keyLabels[slot] : '[?]', 32, '#00f0c8', 0.5, 0, '#000', 2);

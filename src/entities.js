@@ -1517,3 +1517,36 @@ class DamageText {
     release() { this.text.setVisible(false); }
     destroy() { this.text.destroy(); }
 }
+
+class Sphere {
+    constructor(scene) {
+        this.scene = scene;
+        this.angle = 0;
+        this.sprite = scene.addWorld(scene.add.sprite(0, 0, 'icon_sphere').setOrigin(0.5, 0.5));
+        this.sprite.setDepth(12);
+        this.sprite.setBlendMode(Phaser.BlendModes.ADD);
+        this.sprite.setScale(C.SPHERE.SIZE / this.sprite.width);
+    }
+    update(dt) {
+        const scene = this.scene, p = scene.player;
+        const lvl = p.sphereLevel;
+        if (lvl <= 0) { this.sprite.setVisible(false); return; }
+        this.sprite.setVisible(true);
+        const T = C.SPHERE.BASE_PERIOD - (lvl - 1);
+        this.angle += (2 * Math.PI / T) * dt;
+        const ox = p.sprite.x + Math.cos(this.angle) * C.SPHERE.RADIUS;
+        const oy = p.sprite.y + Math.sin(this.angle) * C.SPHERE.RADIUS;
+        this.sprite.setPosition(ox, oy);
+        this.sprite.rotation += dt * 4;
+        const dmg = Math.max(1, Math.floor(p.attackDamage * C.SPHERE.DAMAGE_MULT + 0.5));
+        for (const e of scene.enemies) {
+            if (e.sphereCd > 0) continue;
+            if (distSq(ox, oy, e.sprite.x, e.sprite.y) < C.SPHERE.HIT_DIST_SQ) {
+                e.hp -= dmg;
+                e.hitFlashTimer = 0.12;
+                e.sphereCd = C.SPHERE.HIT_CD;
+            }
+        }
+    }
+    destroy() { if (this.sprite) { this.sprite.destroy(); this.sprite = null; } }
+}

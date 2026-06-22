@@ -113,6 +113,7 @@ class MainScene extends Phaser.Scene {
         this.shotsFired = 0;
 
         this.runUpgradeLevels = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        this.sphere = null;
 
         this.selectedMenuIndex = 0;
         this.selectedSettingIndex = 0;
@@ -391,6 +392,7 @@ class MainScene extends Phaser.Scene {
         this.crazyMode = false; this.portal = null; this._crazySpawnDelay = 0;
         this._pendingPortalSubmit = false; this._nameClaimOnly = false; this._lastRank = null;
         if (this.portalSprite) { this.portalSprite.destroy(); this.portalSprite = null; }
+        if (this.sphere) { this.sphere.destroy(); this.sphere = null; }
         this.stageStats = []; this._stagePrev = { time: 0, kills: 0, coins: 0, score: 0 };
         this.slamRingTimer = -1; this.playerBeam = null; this.soundWaves.length = 0;
 
@@ -585,6 +587,8 @@ class MainScene extends Phaser.Scene {
 
         for (const b of this.bullets) b.update(dt);
 
+        if (this.sphere) this.sphere.update(dt);
+
         for (const sk of this.skulls) sk.update(dt);
         this._filterDestroy(this.skulls, sk => sk.dead);
 
@@ -644,6 +648,7 @@ class MainScene extends Phaser.Scene {
                 }
             }
             if (e.bladeMailCd > 0) e.bladeMailCd -= dt;
+            if (e.sphereCd > 0) e.sphereCd -= dt;
 
             if (e.isBoss3 && e.beamActive) {
                 const bx = e.sprite.x, by = e.sprite.y;
@@ -980,7 +985,7 @@ class MainScene extends Phaser.Scene {
         else if (id === 6) p.pierce = true;
         else if (id === 7) p.damageReduction = 0.10 * lvl;
         else if (id === 8) p.critChance += 0.10;
-        else if (id === 9) p.sphereLevel = lvl;
+        else if (id === 9) { p.sphereLevel = lvl; if (!this.sphere) this.sphere = new Sphere(this); }
         else if (id === 10) p.doubleTapLevel = lvl;
         p.lastUpgradeId = id;
         p.messageTimer = 2.0;

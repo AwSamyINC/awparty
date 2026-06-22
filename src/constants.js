@@ -53,6 +53,15 @@ const C = {
         SHATTER_SIZE: 44,
     },
 
+    SPHERE: {
+        RADIUS: 150,
+        SIZE: 90,
+        HIT_DIST_SQ: 90 * 90,
+        DAMAGE_MULT: 0.5,
+        HIT_CD: 0.4,
+        BASE_PERIOD: 5,
+    },
+
     STROBE_BEAM_DAMAGE: 40,
     STROBE_BEAM_HIT_MARGIN: 40,
 
@@ -229,7 +238,35 @@ const EnemyType = {
 const BossState = { WALKING: 0, PREPARING: 1, JUMPING: 2, RECOVERING: 3 };
 const GoblinState = { WALKING: 0, PREPARING: 1, THROWING: 2, RECOVERING: 3 };
 
-const UPGRADE_ICONS = ['icon_fire', 'icon_dmg', 'icon_speed', 'icon_magnet', 'icon_hp', 'icon_blademail', 'icon_pierce'];
+const UPGRADE_ICONS = ['icon_fire', 'icon_dmg', 'icon_speed', 'icon_magnet', 'icon_hp',
+                       'icon_blademail', 'icon_pierce', 'icon_shield', 'icon_crit',
+                       'icon_sphere', 'icon_doubletap'];
+
+const CARD_COUNT = 11;
+
+const TIER = { COMMON: 0, RARE: 1, LEGENDARY: 2 };
+
+const CARD_TIER = [
+  TIER.COMMON, TIER.COMMON, TIER.COMMON, TIER.COMMON, TIER.COMMON, // 0..4
+  TIER.RARE,        // 5 blademail
+  TIER.LEGENDARY,   // 6 pierce
+  TIER.RARE,        // 7 shield
+  TIER.RARE,        // 8 crit
+  TIER.RARE,        // 9 sphere
+  TIER.LEGENDARY,   // 10 double tap
+];
+
+const CARD_MAX_LEVEL = [
+  10, Infinity, 10, 10, Infinity, // 0 fire, 1 dmg(∞), 2 speed, 3 magnet, 4 hp(∞)
+  1,  // 5 blademail
+  1,  // 6 pierce
+  3,  // 7 shield
+  1,  // 8 crit
+  5,  // 9 sphere
+  3,  // 10 double tap
+];
+
+const TIER_WEIGHTS = [64, 28, 8]; // common / rare / legendary
 
 const LEGENDARY_UPGRADE_IDS = [5, 6];
 const LEGENDARY_CARD_CHANCE = 0.13;
@@ -309,6 +346,10 @@ const TEXTURE_MANIFEST = [
     ['icon_hp', 'icon_hp.png'],
     ['icon_blademail', 'icon_blademail.png'],
     ['icon_pierce', 'icon_pierce.png'],
+    ['icon_shield', 'icon_shield.png'],
+    ['icon_crit', 'icon_crit.png'],
+    ['icon_sphere', 'icon_sphere.png'],
+    ['icon_doubletap', 'icon_doubletap.png'],
     ['art_bloodpact', 'art_bloodpact.png'],
     ['art_glasscannon', 'art_glasscannon.png'],
     ['art_echo', 'art_echo.png'],

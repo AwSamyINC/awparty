@@ -129,7 +129,7 @@ const C = {
     BOSSSPLIT: {
         SHOVE_RADIUS: 170,
         SHOVE_FORCE: 300,
-        CHARGE_BURST: 1.2,
+        CHARGE_BURST: 0.7,
         CHARGE_MULT: 1.8,
         TIERS: [
             { hpMult: 1.0,  dmgMult: 1.0, scaleMult: 1.0,  splits: 2 },

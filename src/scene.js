@@ -32,13 +32,14 @@ class MainScene extends Phaser.Scene {
         this.worldLayer = this.add.layer();
         this.uiLayer = this.add.layer();
 
-        this.cameras.main.setBounds(0, 0, C.ARENA_WIDTH, C.ARENA_HEIGHT);
+        this.arenaW = C.ARENA_WIDTH; this.arenaH = C.ARENA_HEIGHT;
+        this.cameras.main.setBounds(0, 0, this.arenaW, this.arenaH);
         this.uiCam = this.cameras.add(0, 0, C.VIEW_WIDTH, C.VIEW_HEIGHT);
         this.cameras.main.ignore(this.uiLayer);
         this.uiCam.ignore(this.worldLayer);
 
-        this.arena = this.addWorld(this.add.tileSprite(0, 0, C.ARENA_WIDTH, C.ARENA_HEIGHT, 'floor').setOrigin(0, 0));
-        this.arenaBorder = this.addWorld(this.add.rectangle(0, 0, C.ARENA_WIDTH, C.ARENA_HEIGHT).setOrigin(0, 0));
+        this.arena = this.addWorld(this.add.tileSprite(0, 0, this.arenaW, this.arenaH, 'floor').setOrigin(0, 0));
+        this.arenaBorder = this.addWorld(this.add.rectangle(0, 0, this.arenaW, this.arenaH).setOrigin(0, 0));
         this.arenaBorder.setStrokeStyle(15, 0xff0032);
         this.arenaBorder.isFilled = false;
         this.arenaBorder.setVisible(false);
@@ -248,8 +249,8 @@ class MainScene extends Phaser.Scene {
         const R = 1150, count = 36;
         for (let i = 0; i < count; i++) {
             const ang = (i / count) * Math.PI * 2;
-            const x = clamp(px + Math.cos(ang) * R, 40, C.ARENA_WIDTH - 40);
-            const y = clamp(py + Math.sin(ang) * R, 40, C.ARENA_HEIGHT - 40);
+            const x = clamp(px + Math.cos(ang) * R, 40, this.arenaW - 40);
+            const y = clamp(py + Math.sin(ang) * R, 40, this.arenaH - 40);
             const e = new Enemy(this, x, y, this._enemyKey);
             e.hp = 3; e.maxHp = 3;
             this._applyChapterEnemy(e);
@@ -348,6 +349,13 @@ class MainScene extends Phaser.Scene {
         this.isGameOver = false;
         const p = this.player, s = this.save;
 
+        this.chapter = getChapter(this.currentChapter);
+        this.arenaW = this.chapter.arenaW || C.ARENA_WIDTH;
+        this.arenaH = this.chapter.arenaH || C.ARENA_HEIGHT;
+        this.cameras.main.setBounds(0, 0, this.arenaW, this.arenaH);
+        this.arena.setSize(this.arenaW, this.arenaH);
+        this.arenaBorder.setSize(this.arenaW, this.arenaH);
+
         p.maxHp = s.permMaxHp; p.hp = s.permMaxHp;
         p.attackDamage = s.permDamage; p.speed = s.permSpeed;
 
@@ -373,7 +381,7 @@ class MainScene extends Phaser.Scene {
         p.level = 1; p.currentXP = 0; p.xpToNextLevel = C.XP_BASE; p.shootCooldown = 0.45;
         this.regenTimer = 0; this.shotsFired = 0;
         this.killCount = 0; this.coinsThisRun = 0; this.runScore = 0;
-        p.sprite.setPosition(C.ARENA_WIDTH / 2, C.ARENA_HEIGHT / 2);
+        p.sprite.setPosition(this.arenaW / 2, this.arenaH / 2);
         p.isInvincible = false; p.invincibilityTimer = 0;
         p.bladeMail = false; p.pierce = false;
         p.damageReduction = 0; p.sphereLevel = 0; p.doubleTapLevel = 0;
@@ -386,7 +394,6 @@ class MainScene extends Phaser.Scene {
         this.phaseKills = 0;
         this._encPhase = 0; this._encTimer = 0; this._encAt = 0; this._encDone = false;
 
-        this.chapter = getChapter(this.currentChapter);
         this._enemyKey = this._tex(this.chapter.enemyKey, 'enemy');
         this._goblinKey = this._tex(this.chapter.goblinKey, 'enemyV');
         this._boss1Key = this._tex(this.chapter.boss1Key, 'enemy');
@@ -402,7 +409,7 @@ class MainScene extends Phaser.Scene {
         else this.arena.clearTint();
         const fsrc = this.textures.get(fk).getSourceImage();
         if (usingOwnFloor && this.chapter.floorMode === 'stretch' && fsrc && fsrc.width) {
-            this.arena.setTileScale(C.ARENA_WIDTH / fsrc.width, C.ARENA_HEIGHT / fsrc.height);
+            this.arena.setTileScale(this.arenaW / fsrc.width, this.arenaH / fsrc.height);
         } else {
             this.arena.setTileScale(1, 1);
         }
@@ -432,11 +439,11 @@ class MainScene extends Phaser.Scene {
         this.pendingAbilityCount = 0;
         this.spawner.reset();
 
-        const cx = C.ARENA_WIDTH / 2, cy = C.ARENA_HEIGHT / 2;
+        const cx = this.arenaW / 2, cy = this.arenaH / 2;
         const minD = 1200;
         for (let i = 0; i < 10; i++) {
             for (let a = 0; a < 20; a++) {
-                const tx = randInt(C.ARENA_WIDTH), ty = randInt(C.ARENA_HEIGHT);
+                const tx = randInt(this.arenaW), ty = randInt(this.arenaH);
                 if (distSq(cx, cy, tx, ty) >= minD * minD) {
                     const e = new Enemy(this, tx, ty, this._enemyKey);
                     const r = randInt(100);
@@ -517,7 +524,7 @@ class MainScene extends Phaser.Scene {
             left: this.keys.left.isDown, right: this.keys.right.isDown,
             up: this.keys.up.isDown, down: this.keys.down.isDown, space: this.keys.space.isDown,
         };
-        p.update(dt, C.ARENA_WIDTH, C.ARENA_HEIGHT, input);
+        p.update(dt, this.arenaW, this.arenaH, input);
 
         if (hasArtifact(s, ARTIFACT.BERSERKER) && p.hp <= Math.floor(p.maxHp * 0.4))
             p.currentSpeedMultiplier = Math.max(1.0, p.currentSpeedMultiplier);
@@ -553,7 +560,7 @@ class MainScene extends Phaser.Scene {
 
         this.vinylSpawnTimer += dt;
         if (this.vinylSpawnTimer >= 60) {
-            this.vinyls.push(this.spawnVinyl(randInt(C.ARENA_WIDTH), randInt(C.ARENA_HEIGHT)));
+            this.vinyls.push(this.spawnVinyl(randInt(this.arenaW), randInt(this.arenaH)));
             this.vinylSpawnTimer = 0;
         }
 
@@ -616,7 +623,7 @@ class MainScene extends Phaser.Scene {
         this._updateHypeAuras(dt);
 
         for (const e of this.enemies) {
-            e.update(dt, px, py, C.ARENA_WIDTH, C.ARENA_HEIGHT);
+            e.update(dt, px, py, this.arenaW, this.arenaH);
             if (e.spawning) continue;
 
             if (e.justThrew) {
@@ -695,15 +702,15 @@ class MainScene extends Phaser.Scene {
                 if (b.isDestroyed || b.ricochetsLeft <= 0) continue;
                 let x = b.sprite.x, y = b.sprite.y, hit = false;
                 if (x <= 0) { b.vx = Math.abs(b.vx); x = 1; hit = true; }
-                else if (x >= C.ARENA_WIDTH) { b.vx = -Math.abs(b.vx); x = C.ARENA_WIDTH - 1; hit = true; }
+                else if (x >= this.arenaW) { b.vx = -Math.abs(b.vx); x = this.arenaW - 1; hit = true; }
                 if (y <= 0) { b.vy = Math.abs(b.vy); y = 1; hit = true; }
-                else if (y >= C.ARENA_HEIGHT) { b.vy = -Math.abs(b.vy); y = C.ARENA_HEIGHT - 1; hit = true; }
+                else if (y >= this.arenaH) { b.vy = -Math.abs(b.vy); y = this.arenaH - 1; hit = true; }
                 if (hit) { b.ricochetsLeft--; b.sprite.setPosition(x, y); }
             }
         }
         this._filterRelease(this.bullets, 'bullet', b => {
             const x = b.sprite.x, y = b.sprite.y;
-            return b.isDestroyed || (b.ricochetsLeft <= 0 && (x < 0 || x > C.ARENA_WIDTH || y < 0 || y > C.ARENA_HEIGHT));
+            return b.isDestroyed || (b.ricochetsLeft <= 0 && (x < 0 || x > this.arenaW || y < 0 || y > this.arenaH));
         });
 
         this._checkPhaseTransitions();
@@ -734,7 +741,7 @@ class MainScene extends Phaser.Scene {
         }
         this._filterRelease(this.vinyls, 'vinyl', v => v.isCollected);
 
-        for (const pr of this.enemyProjectiles) pr.update(dt, C.ARENA_WIDTH, C.ARENA_HEIGHT);
+        for (const pr of this.enemyProjectiles) pr.update(dt, this.arenaW, this.arenaH);
         for (const pr of this.enemyProjectiles) {
             if (pr.isDestroyed) continue;
             if (distSq(pr.sprite.x, pr.sprite.y, px, py) < C.COLLISION.PROJECTILE_HIT_SQ) {
@@ -769,8 +776,8 @@ class MainScene extends Phaser.Scene {
                     da = Math.atan2(Math.sin(da), Math.cos(da));
                     if (Math.abs(da) <= w.halfArc) {
                         w.hit = true;
-                        p.sprite.x = clamp(p.sprite.x + (dx / dist) * SW.WAVE_KNOCKBACK, 0, C.ARENA_WIDTH);
-                        p.sprite.y = clamp(p.sprite.y + (dy / dist) * SW.WAVE_KNOCKBACK, 0, C.ARENA_HEIGHT);
+                        p.sprite.x = clamp(p.sprite.x + (dx / dist) * SW.WAVE_KNOCKBACK, 0, this.arenaW);
+                        p.sprite.y = clamp(p.sprite.y + (dy / dist) * SW.WAVE_KNOCKBACK, 0, this.arenaH);
                         this._damagePlayer(w.damage, 0.3, 60);
                     }
                 }
@@ -922,8 +929,8 @@ class MainScene extends Phaser.Scene {
                 if (dq < SR * SR && dq > 0.001) {
                     e.hp -= dmg; e.hitFlashTimer = 0.12;
                     const d = Math.sqrt(dq);
-                    e.sprite.x = clamp(e.sprite.x + (e.sprite.x - px) / d * kb, 0, C.ARENA_WIDTH);
-                    e.sprite.y = clamp(e.sprite.y + (e.sprite.y - py) / d * kb, 0, C.ARENA_HEIGHT);
+                    e.sprite.x = clamp(e.sprite.x + (e.sprite.x - px) / d * kb, 0, this.arenaW);
+                    e.sprite.y = clamp(e.sprite.y + (e.sprite.y - py) / d * kb, 0, this.arenaH);
                     this.dmgTexts.push(this.spawnDamageText(e.sprite.x, e.sprite.y, dmg, false));
                 }
             }

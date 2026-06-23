@@ -1,6 +1,6 @@
 
 MainScene.prototype._drawSoundWaveWalls = function(g) {
-        const W = C.ARENA_WIDTH, H = C.ARENA_HEIGHT, tm = this.globalTime;
+        const W = this.arenaW, H = this.arenaH, tm = this.globalTime;
         const step = 26;
         const k = (Math.PI * 2) / 220;
         const speed = 2;

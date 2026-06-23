@@ -26,7 +26,7 @@ MainScene.prototype._updatePhaseProgression = function(dt, px, py) {
         if (this.gamePhase === GamePhase.PHASE_3) {
             this.phase3Timer += dt;
             if ((this.phase3Timer >= C.BOSS_TIME_CAP || (this.phase3Timer >= C.BOSS_KILL_MIN_TIME && this.phaseKills >= this._bossKillReq(3))) && !this.phase3BossSpawned) {
-                const bp = findSpawnPos(px, py, C.ARENA_WIDTH, C.ARENA_HEIGHT, 800);
+                const bp = findSpawnPos(px, py, this.arenaW, this.arenaH, 800);
                 const boss3 = new Enemy(this, bp.x, bp.y, this._boss3Key);
                 if (this.chapter && this.chapter.boss3Type === 'SPLIT') boss3.makeBossSplit(this._boss3Key, 0);
                 else boss3.makeBoss3(this._boss3Key);
@@ -41,7 +41,7 @@ MainScene.prototype._updatePhaseProgression = function(dt, px, py) {
         if (this.gamePhase === GamePhase.PHASE_2) {
             this.phase2Timer += dt;
             if ((this.phase2Timer >= C.BOSS_TIME_CAP || (this.phase2Timer >= C.BOSS_KILL_MIN_TIME && this.phaseKills >= this._bossKillReq(2))) && !this.phase2BossSpawned) {
-                const bp = findSpawnPos(px, py, C.ARENA_WIDTH, C.ARENA_HEIGHT, 800);
+                const bp = findSpawnPos(px, py, this.arenaW, this.arenaH, 800);
                 const bx = bp.x, by = bp.y;
                 const boss2 = new Enemy(this, bx, by, this._boss2Key);
                 if (this.chapter && this.chapter.boss2Type === 'BASS') boss2.makeBossBass(this._boss2Key);
@@ -66,7 +66,7 @@ MainScene.prototype._updateSpawning = function(dt, px, py) {
             const p2 = this.gamePhase === GamePhase.PHASE_2;
             const p3 = this.gamePhase === GamePhase.PHASE_3;
             const spawnTime = p3 ? this.phase3Timer : (p2 ? this.phase2Timer : this.survivalTimer);
-            this.spawner.update(this, dt, spawnTime, C.ARENA_WIDTH, C.ARENA_HEIGHT, px, py, this.enemies,
+            this.spawner.update(this, dt, spawnTime, this.arenaW, this.arenaH, px, py, this.enemies,
                 s.isHardcoreMode, this._enemyKey, this._goblinKey, p2, this.phase2Timer, p3, this.activeStep);
         }
     };
@@ -95,7 +95,7 @@ MainScene.prototype._startCrazyMode = function() {
         this._snapshotStage();
         this.crazyMode = true;
         this._crazySpawnDelay = 10;
-        this.portal = { x: C.ARENA_WIDTH / 2, y: C.PORTAL_TOP_MARGIN };
+        this.portal = { x: this.arenaW / 2, y: C.PORTAL_TOP_MARGIN };
         if (this.textures.exists('portal')) {
             this.portalSprite = this.addWorld(this.add.image(this.portal.x, this.portal.y, 'portal')).setDepth(8);
             this.portalSprite.setDisplaySize(C.PORTAL_RADIUS * 2.6, C.PORTAL_RADIUS * 2.6);

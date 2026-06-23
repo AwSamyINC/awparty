@@ -1262,7 +1262,7 @@ class SkullProjectile {
             const hr = C.ABILITY.SKULL_HIT_RADIUS;
             if (distSq(this.x, this.y, this.target.sprite.x, this.target.sprite.y) < hr * hr) this._hit(this.target);
         }
-        if (this.x < -150 || this.y < -150 || this.x > C.ARENA_WIDTH + 150 || this.y > C.ARENA_HEIGHT + 150) this.dead = true;
+        if (this.x < -150 || this.y < -150 || this.x > this.scene.arenaW + 150 || this.y > this.scene.arenaH + 150) this.dead = true;
     }
 
     _hit(e) {
@@ -1311,7 +1311,7 @@ class ShatterBomb {
         this.spin += dt;
         this.sprite.setPosition(this.x, this.y);
         this.sprite.angle = this.spin * 540;
-        const out = (this.x < 0 || this.y < 0 || this.x > C.ARENA_WIDTH || this.y > C.ARENA_HEIGHT);
+        const out = (this.x < 0 || this.y < 0 || this.x > this.scene.arenaW || this.y > this.scene.arenaH);
         if (this.traveled >= A.SHATTER_RANGE || out || this._hitsEnemy()) this._burst();
     }
 

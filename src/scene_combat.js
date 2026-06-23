@@ -1,8 +1,8 @@
 
 MainScene.prototype._buildEnemyGrid = function() {
         const CELL = C.CELL_SIZE;
-        const cols = Math.ceil(C.ARENA_WIDTH / CELL);
-        const rows = Math.ceil(C.ARENA_HEIGHT / CELL);
+        const cols = Math.ceil(this.arenaW / CELL);
+        const rows = Math.ceil(this.arenaH / CELL);
         if (!this._sepGrid || this._sepGrid.length !== cols * rows) {
             this._sepGrid = new Array(cols * rows);
             for (let i = 0; i < this._sepGrid.length; i++) this._sepGrid[i] = [];
@@ -106,8 +106,8 @@ MainScene.prototype.handleEnemyDeaths = function(px, py) {
                 const n = SP.splitMin + randInt(SP.splitMax - SP.splitMin + 1);
                 for (let i = 0; i < n; i++) {
                     const ang = Math.random() * Math.PI * 2;
-                    const mx = clamp(e.sprite.x + Math.cos(ang) * 40, 0, C.ARENA_WIDTH);
-                    const my = clamp(e.sprite.y + Math.sin(ang) * 40, 0, C.ARENA_HEIGHT);
+                    const mx = clamp(e.sprite.x + Math.cos(ang) * 40, 0, this.arenaW);
+                    const my = clamp(e.sprite.y + Math.sin(ang) * 40, 0, this.arenaH);
                     const m = new Enemy(this, mx, my, this._mosherKey);
                     m.makeMosherling(this._mosherKey);
                     this._applyChapterEnemy(m);
@@ -145,8 +145,8 @@ MainScene.prototype.handleEnemyDeaths = function(px, py) {
                 if (e.isBossSplit && e.canSplit) {
                     for (let i = 0; i < e.splitCount; i++) {
                         const ang = (i / e.splitCount) * Math.PI * 2 + Math.random();
-                        const cx = clamp(ex + Math.cos(ang) * 70, 60, C.ARENA_WIDTH - 60);
-                        const cy = clamp(ey + Math.sin(ang) * 70, 60, C.ARENA_HEIGHT - 60);
+                        const cx = clamp(ex + Math.cos(ang) * 70, 60, this.arenaW - 60);
+                        const cy = clamp(ey + Math.sin(ang) * 70, 60, this.arenaH - 60);
                         const c = new Enemy(this, cx, cy, this._boss3Key);
                         c.makeBossSplit(this._boss3Key, e.splitTier + 1);
                         this._applyChapterBoss(c);

@@ -227,11 +227,24 @@ const CHAPTERS = [
       hpMult: 1.6, dmgMult: 1.35, spawnMult: 1.2, bossHpMult: 1.8 },
     { id: 3, hue: 0xff5050,
       floorKey: 'floor3', floorTint: 0xff6464, floorMode: 'stretch',
-      enemyKey: 'enemy3', goblinKey: 'enemyV3', subwooferKey: 'enemy3_sub', mosherKey: 'enemy3_mosher', hypemanKey: 'enemy3_hype',
-      boss1Key: 'c3_boss1', boss2Key: 'c3_boss2', boss3Key: 'c3_boss3', encircleEvent: true,
+      enemyKey: 'enemy', goblinKey: 'enemyV',
+      boss1Key: 'enemy', boss2Key: 'boss2', boss3Key: 'boss3',
+      arenaW: 5000, arenaH: 5000, custom: 'CH3', encircleEvent: true,
       hpMult: 2.4, dmgMult: 1.8, spawnMult: 1.4, bossHpMult: 2.6 },
 ];
 function getChapter(id) { return CHAPTERS.find(c => c.id === id) || CHAPTERS[0]; }
+
+C.CHAPTER3 = {
+    STAGE2_KILLS: 60,       // кап убийств этапа 2 (мид-босс B2 на половине)
+    STAGE3_KILLS: 70,       // кап убийств этапа 3 (Носорог на половине, затем дуэт)
+    BREATHER: 4,            // сек паузы спавна после смерти мид-босса
+    HARDCORE_KILL_MULT: 1.5,
+    mosherKey: 'enemy2_mosher',
+    subwooferKey: 'enemy2_sub',
+    rhinoArt: 'c2_boss2',   // Носорог = Bass-rush
+    doctorArt: 'c2_boss1',  // Врач
+    teleporterArt: 'boss3', // Телепортёр (СТРОБ)
+};
 
 const GamePhase = {
     PHASE_1: 'PHASE_1',
@@ -335,14 +348,6 @@ const TEXTURE_MANIFEST = [
     ['c2_boss2', 'c2_boss2.png'],
     ['c2_boss3', 'c2_boss3.png'],
     ['floor3', 'floor3.jpg'],
-    ['enemy3', 'enemy3.png'],
-    ['enemyV3', 'enemyV3.png'],
-    ['enemy3_sub', 'enemy3_sub.png'],
-    ['enemy3_mosher', 'enemy3_mosher.png'],
-    ['enemy3_hype', 'enemy3_hype.png'],
-    ['c3_boss1', 'c3_boss1.png'],
-    ['c3_boss2', 'c3_boss2.png'],
-    ['c3_boss3', 'c3_boss3.png'],
     ['ability_laser', 'laser.png'],
     ['gem', 'gem.png'],
     ['boss_soul', 'boss_soul.png'],

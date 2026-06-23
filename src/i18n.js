@@ -154,6 +154,8 @@ const I18N = {
         boss_name: 'THE OVERSEER',
         boss2_name: 'BASS DROP',
         boss3_name: 'STROBE',
+        rhino_name: 'RHINO',
+        boss_duet: 'DOCTOR + TELEPORTER',
         phase: 'PHASE',
         clear_all: 'CLEAR ALL ENEMIES',
 
@@ -362,6 +364,8 @@ const I18N = {
         boss_name: 'НАДЗИРАТЕЛЬ',
         boss2_name: 'БАС-ДРОП',
         boss3_name: 'СТРОБ',
+        rhino_name: 'НОСОРОГ',
+        boss_duet: 'ВРАЧ + ТЕЛЕПОРТЁР',
         phase: 'ЭТАП',
         clear_all: 'УНИЧТОЖЬТЕ ВСЕХ ВРАГОВ',
 

@@ -286,6 +286,16 @@ MainScene.prototype._buildLeaderboard = function() {
         const bpx = 40, bpy = 14; // запас под палец/мышь вокруг текста
         this._lbBackRect = { x: W / 2 - backTxt.width / 2 - bpx, y: H * 0.92 - bpy,
                              w: backTxt.width + 2 * bpx, h: backTxt.height + 2 * bpy };
+        this._lbBackText = backTxt;   // ссылка для подсветки при наведении
+        this._lbBackHover = false;
+    }
+
+MainScene.prototype._styleLbBack = function(hover) {
+        const txt = this._lbBackText; if (!txt) return;
+        // как у кнопок меню: подсветка = белый + розовая обводка + крупнее
+        txt.setColor(hover ? '#ffffff' : '#00ffc8')
+           .setStroke(hover ? '#ff0096' : '#000', hover ? 3 : 2)
+           .setFontSize(hover ? 42 : 36);
     }
 
 MainScene.prototype._runCards = function() {
@@ -615,6 +625,10 @@ MainScene.prototype.onPointerMove = function(p) {
             let ns = -1;
             for (let i = 0; i < CHAPTERS.length; i++) { const r = this._chapterCardRect(i); if (hit(r.x, r.y, r.w, r.h)) ns = i; }
             if (ns !== -1 && ns !== this.selectedChapterIndex) { this.selectedChapterIndex = ns; this.rebuildMenu(); }
+        } else if (st === GameState.LEADERBOARD) {
+            const bk = this._lbBackRect;
+            const over = !!(bk && hit(bk.x, bk.y, bk.w, bk.h));
+            if (over !== !!this._lbBackHover) { this._lbBackHover = over; this._styleLbBack(over); }
         } else if (st === GameState.PAUSED) {
             let ns = -1;
             for (let i = 0; i < 3; i++) if (hit(W / 2 - 250, H / 2 + 50 + i * 100 - 40, 500, 80)) ns = i;

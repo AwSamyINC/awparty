@@ -146,6 +146,18 @@ const C = {
         BOSSDOC_DURATION: 1.4,
     },
 
+    // Анимация смерти обычных врагов («падение/распад вниз»). Боссов не трогает.
+    // DARK_TINT — hex, а не rgb(): constants.js грузится до utils.js, где живёт rgb.
+    // 0x2D2D37 == rgb(45,45,55).
+    DEATH_FX: {
+        DURATION: 0.3,     // сек
+        END_SCALE_Y: 0.2,  // во сколько ужать высоту к концу
+        WIDEN: 0.1,        // насколько раздуть ширину в начале (расплющивание)
+        FLASH_K: 0.15,     // доля анимации с белой вспышкой
+        FADE_START: 0.55,  // с какого k начинается затухание alpha
+        DARK_TINT: 0x2D2D37,
+    },
+
     MAX_PERM_MAXHP: 10,
     MAX_PERM_DAMAGE: 10,
     MAX_PERM_SPEED_LEVEL: 5,

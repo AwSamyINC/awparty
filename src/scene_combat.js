@@ -123,6 +123,10 @@ MainScene.prototype.handleEnemyDeaths = function(px, py) {
                 p.hp = Math.min(p.maxHp, p.hp + 2);
             }
             const ex = e.sprite.x, ey = e.sprite.y;
+            // Анимация смерти обычных врагов (труп оседает вниз). Боссов не трогаем —
+            // у них остаётся резкое исчезновение под взрыв + shake + душу. Стоит ДО
+            // ветки гоблина (которая continue-ит), поэтому покрывает и его.
+            if (!e.isBoss && !e.isBoss2 && !e.isBoss3) this.deathFx.push(this.spawnDeathFx(e));
             if (e.type === EnemyType.GOBLIN) {
                 for (let i = 0; i < 30; i++) this.particles.push(this.spawnParticle(ex, ey, randInt(2) === 0 ? rgb(180, 0, 255) : rgb(255, 0, 200)));
                 for (let k = 0; k < 3; k++) this.gems.push(this.spawnGem(ex - 24 + randInt(40) - 20, ey + randInt(40) - 20));

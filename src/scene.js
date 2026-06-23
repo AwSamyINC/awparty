@@ -53,13 +53,14 @@ class MainScene extends Phaser.Scene {
         this.coins = [];
         this.vinyls = [];
         this.particles = [];
+        this.deathFx = [];
         this.dmgTexts = [];
         this.bossSouls = [];
         this.skulls = [];
         this.bombs = [];
         this.soundWaves = [];
 
-        this.pools = { bullet: [], eproj: [], gem: [], coin: [], vinyl: [], particle: [], dmgText: [] };
+        this.pools = { bullet: [], eproj: [], gem: [], coin: [], vinyl: [], particle: [], dmgText: [], deathFx: [] };
 
         this.player = new Player(this);
         this.player.sprite.setDepth(10);
@@ -296,6 +297,10 @@ class MainScene extends Phaser.Scene {
         const p = this.pools.dmgText;
         return p.length ? p.pop().reinit(x, y, dmg, crit) : new DamageText(this, x, y, dmg, crit);
     }
+    spawnDeathFx(e) {
+        const p = this.pools.deathFx;
+        return p.length ? p.pop().reinit(e) : new DeathFx(this, e);
+    }
 
     _filterRelease(arr, poolKey, pred) {
         const pool = this.pools[poolKey];
@@ -406,6 +411,7 @@ class MainScene extends Phaser.Scene {
         this._releaseAll(this.coins, 'coin');
         this._releaseAll(this.vinyls, 'vinyl');
         this._releaseAll(this.particles, 'particle');
+        this._releaseAll(this.deathFx, 'deathFx');
         this._releaseAll(this.dmgTexts, 'dmgText');
         this.player.ghosts.forEach(g => g.img.destroy()); this.player.ghosts.length = 0;
 
@@ -732,6 +738,8 @@ class MainScene extends Phaser.Scene {
         this._filterRelease(this.dmgTexts, 'dmgText', d => d.lifetime <= 0);
         for (const pa of this.particles) pa.update(dt);
         this._filterRelease(this.particles, 'particle', pa => pa.lifetime <= 0);
+        for (const fx of this.deathFx) fx.update(dt);
+        this._filterRelease(this.deathFx, 'deathFx', fx => fx.done);
 
         if (this.slamRingTimer >= 0) { this.slamRingTimer += dt; if (this.slamRingTimer >= C.SLAM_RING_DURATION) this.slamRingTimer = -1; }
         if (this.playerBeam) { this.playerBeam.timer -= dt; if (this.playerBeam.timer <= 0) this.playerBeam = null; }

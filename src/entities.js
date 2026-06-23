@@ -1473,6 +1473,67 @@ class Particle {
     destroy() { this.rect.destroy(); }
 }
 
+// «Труп» — отдельная короткоживущая сущность анимации смерти обычного врага.
+// Снимает слепок вида врага (текстура/масштаб/угол) и проигрывает оседание вниз,
+// пока сам враг удаляется как обычно. Боссов не порождает (см. handleEnemyDeaths).
+// Глубину НЕ трогаем: пол (tileSprite) и враги оба на depth 0, упорядочены вставкой;
+// depth -1 спрятал бы труп ПОД полом. Default depth 0 — как у партиклов.
+class DeathFx {
+    constructor(scene, e) {
+        this.scene = scene;
+        this.sprite = scene.addWorld(scene.add.sprite(0, 0, e.sprite.texture.key));
+        this.sprite.setOrigin(0.5, 1.0);
+        this.reinit(e);
+    }
+
+    reinit(e) {
+        const es = e.sprite, s = this.sprite;
+        s.setTexture(es.texture.key, es.frame.name);
+        s.setOrigin(0.5, 1.0);
+        s.setFlip(es.flipX, es.flipY);
+        s.angle = es.angle;
+        this.baseScaleX = es.scaleX;
+        this.baseScaleY = es.scaleY;
+        // ставим в точку «ног» врага (origin снизу) — сжатие читается как оседание к земле
+        s.setPosition(es.x, es.y + es.displayHeight / 2);
+        s.setScale(this.baseScaleX, this.baseScaleY);
+        s.setTint(0xffffff);
+        s.setAlpha(1).setVisible(true);
+        this.timer = 0;
+        this.done = false;
+        return this;
+    }
+
+    update(dt) {
+        if (this.done) return;
+        const F = C.DEATH_FX, s = this.sprite;
+        this.timer += dt;
+        const k = clamp(this.timer / F.DURATION, 0, 1);
+
+        // оседание: высота → END_SCALE_Y, ширина чуть раздута в начале (расплющивание)
+        s.setScale(this.baseScaleX * (1 + F.WIDEN * (1 - k)),
+                   this.baseScaleY * (1 - (1 - F.END_SCALE_Y) * k));
+
+        // тинт: белая вспышка → тёмный
+        if (k < F.FLASH_K) {
+            s.setTint(0xffffff);
+        } else {
+            const t = (k - F.FLASH_K) / (1 - F.FLASH_K), d = F.DARK_TINT;
+            s.setTint(rgb(255 + (((d >> 16) & 255) - 255) * t,
+                          255 + (((d >> 8) & 255) - 255) * t,
+                          255 + ((d & 255) - 255) * t));
+        }
+
+        // затухание под конец
+        s.setAlpha(k > F.FADE_START ? 1 - (k - F.FADE_START) / (1 - F.FADE_START) : 1);
+
+        if (k >= 1) this.done = true;
+    }
+
+    release() { this.sprite.clearTint(); this.sprite.setVisible(false); }
+    destroy() { this.sprite.destroy(); }
+}
+
 class DamageText {
     constructor(scene, x, y, damage, isCrit) {
         this.scene = scene;

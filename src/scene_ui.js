@@ -233,7 +233,19 @@ MainScene.prototype._buildLeaderboard = function() {
         const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT;
         this._mAdd(this.add.rectangle(0, 0, W, H, 0x000000, 160 / 255).setOrigin(0, 0));
         this._mText(W / 2, 50, t('lb_title'), 100, '#ffd700', 0.5, 0, '#b40050', 5);
-        this._mText(W / 2, 200, '◀  ' + t('lb_chapter') + ' ' + this.lbChapter + '  ▶', 46, '#ffd700', 0.5, 0.5, '#000', 3);
+        // Глава: метка по центру + кликабельные стрелки по бокам. Стрелки — отдельные
+        // text-объекты, позиции считаем от ширины метки → вид как раньше, а хит-рект
+        // под каждой стрелкой точный (мышь, по образцу _lbSortRects ниже).
+        const chY = 200, chGap = 60, chAW = 80, chAH = 72;
+        const chLabel = this._mText(W / 2, chY, t('lb_chapter') + ' ' + this.lbChapter, 46, '#ffd700', 0.5, 0.5, '#000', 3);
+        const chHalf = chLabel.width / 2;
+        const chLX = W / 2 - chHalf - chGap, chRX = W / 2 + chHalf + chGap;
+        this._mText(chLX, chY, '◀', 46, '#ffd700', 0.5, 0.5, '#000', 3);
+        this._mText(chRX, chY, '▶', 46, '#ffd700', 0.5, 0.5, '#000', 3);
+        this._lbChapterArrows = {
+            left:  { x: chLX - chAW / 2, y: chY - chAH / 2, w: chAW, h: chAH },
+            right: { x: chRX - chAW / 2, y: chY - chAH / 2, w: chAW, h: chAH },
+        };
         const hc = this.lbView === 'hardcore';
         this._mText(W / 2, 258, (hc ? t('lb_hardcore') : t('lb_normal')), 40, hc ? '#ff5050' : '#00ffc8', 0.5, 0.5, '#000', 3);
         const rowY0 = 330, rowH = 54;
@@ -634,6 +646,9 @@ MainScene.prototype.onPointerDown = function(p) {
         if (st === GameState.MENU) {
             for (let i = 0; i < 3; i++) if (hit(W / 2 - 200, H * 0.45 + i * 110 - 40, 400, 80)) { this.selectedMenuIndex = i; this._menuActivate(); return; }
         } else if (st === GameState.LEADERBOARD) {
+            const ca = this._lbChapterArrows, nch = CHAPTERS.length;
+            if (ca && hit(ca.left.x, ca.left.y, ca.left.w, ca.left.h)) { this._setLbBoard(this.lbView, ((this.lbChapter - 2 + nch) % nch) + 1); return; }
+            if (ca && hit(ca.right.x, ca.right.y, ca.right.w, ca.right.h)) { this._setLbBoard(this.lbView, (this.lbChapter % nch) + 1); return; }
             const sr = this._lbSortRects;
             if (sr && hit(sr.score.x, sr.score.y, sr.score.w, sr.score.h)) { this._setLbSort('score'); return; }
             if (sr && hit(sr.time.x, sr.time.y, sr.time.w, sr.time.h)) { this._setLbSort('time'); return; }

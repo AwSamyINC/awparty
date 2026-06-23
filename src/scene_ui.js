@@ -282,7 +282,10 @@ MainScene.prototype._buildLeaderboard = function() {
             } else this._mText(colX[1], y, '---', 30, col, 0, 0);
         }
         this._mText(W / 2, H * 0.86, t('lb_hint_chapter') + '   ' + t('lb_hint_mode') + '   ' + t('lb_hint_sort'), 30, '#7d78a0', 0.5, 0, '#000', 2);
-        this._mText(W / 2, H * 0.92, t('lb_hint_back'), 36, '#00ffc8', 0.5, 0);
+        const backTxt = this._mText(W / 2, H * 0.92, t('lb_hint_back'), 36, '#00ffc8', 0.5, 0);
+        const bpx = 40, bpy = 14; // запас под палец/мышь вокруг текста
+        this._lbBackRect = { x: W / 2 - backTxt.width / 2 - bpx, y: H * 0.92 - bpy,
+                             w: backTxt.width + 2 * bpx, h: backTxt.height + 2 * bpy };
     }
 
 MainScene.prototype._runCards = function() {
@@ -652,7 +655,8 @@ MainScene.prototype.onPointerDown = function(p) {
             const sr = this._lbSortRects;
             if (sr && hit(sr.score.x, sr.score.y, sr.score.w, sr.score.h)) { this._setLbSort('score'); return; }
             if (sr && hit(sr.time.x, sr.time.y, sr.time.w, sr.time.h)) { this._setLbSort('time'); return; }
-            if (hit(W / 2 - 150, H * 0.9 - 30, 300, 60)) this.setState(this.leaderboardFromMenu ? GameState.MENU : GameState.LOBBY);
+            const bk = this._lbBackRect;
+            if (bk && hit(bk.x, bk.y, bk.w, bk.h)) { this.setState(this.leaderboardFromMenu ? GameState.MENU : GameState.LOBBY); return; }
         } else if (st === GameState.SETTINGS) {
             const rr = this._settingsResetRect();
             if (x >= rr.x && x <= rr.x + rr.w && y >= rr.y && y <= rr.y + rr.h) { this._settingsResetClick(); return; }

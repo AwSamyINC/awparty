@@ -53,7 +53,7 @@ const I18N = {
         lb_hint_chapter: '◀ ▶  Chapter',
         lb_hint_mode: '▲ ▼  Mode',
         lb_hint_sort: 'TAB / click  -  Sort (time / score)',
-        lb_hint_back: '[ ESC / ENTER  -  Back ]',
+        lb_hint_back: 'BACK',
 
         pause_title: 'PAUSED',
         pause_resume: 'Resume',
@@ -261,7 +261,7 @@ const I18N = {
         lb_hint_chapter: '◀ ▶  Глава',
         lb_hint_mode: '▲ ▼  Режим',
         lb_hint_sort: 'TAB / клик  -  Сортировка (время / очки)',
-        lb_hint_back: '[ ESC / ENTER  -  Назад ]',
+        lb_hint_back: 'НАЗАД',
 
         pause_title: 'ПАУЗА',
         pause_resume: 'Продолжить',

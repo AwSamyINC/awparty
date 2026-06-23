@@ -144,7 +144,7 @@ MainScene.prototype._buildChapterSelect = function() {
             const bX = r.x + 50, bY = r.y + 46;
             this._mAdd(this.add.rectangle(bX, bY, 74, 56, 0x000000, 0.5).setStrokeStyle(2, uiHue, locked ? 0.5 : 1));
             this._mText(bX, bY, (ch.id < 10 ? '0' : '') + ch.id, 36, hexUi, 0.5, 0.5, '#000', 2);
-            this._mText(cx + 30, bY, t('chapter_label'), 30, locked ? '#6a6a78' : '#ffffff', 0.5, 0.5, '#000', 3);
+            this._mText(cx, bY, t('chapter_label'), 30, locked ? '#6a6a78' : '#ffffff', 0.5, 0.5, '#000', 3);
 
             // 5) кнопка-пилюля «ИГРАТЬ» / замок «ЗАКРЫТО»
             const py = r.y + r.h - 56;

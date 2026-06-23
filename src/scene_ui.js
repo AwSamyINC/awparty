@@ -117,22 +117,57 @@ MainScene.prototype._buildChapterSelect = function() {
             const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
             const sel = i === this.selectedChapterIndex;
             const locked = ch.id > this.save.maxChapterUnlocked;
-            const hue = locked ? 0x39394a : ch.hue;
-            const fill = locked ? 0x16161e : Phaser.Display.Color.IntegerToColor(hue).darken(70).color;
+            const uiHue = locked ? 0x4a4a5a : ch.hue;
+            const hexUi = '#' + uiHue.toString(16).padStart(6, '0');
 
-            this._mAdd(this.add.rectangle(cx, cy, r.w, r.h, fill, 1).setOrigin(0.5, 0.5)
-                .setStrokeStyle(sel ? 6 : 3, hue, locked ? 0.6 : 1));
+            // 1) фон — текстура пола главы, растянута по карточке и затемнена в её цвет
+            const floorKey = this._tex(ch.floorKey, 'floor');
+            const floorTint = locked ? 0x24242e : Phaser.Display.Color.IntegerToColor(ch.hue).darken(62).color;
+            this._mAdd(this.add.image(cx, cy, floorKey)).setDisplaySize(r.w, r.h).setTint(floorTint);
+            this._mAdd(this.add.rectangle(cx, cy, r.w, r.h, 0x06001a, locked ? 0.58 : 0.32).setOrigin(0.5, 0.5));
 
-            const hexHue = '#' + hue.toString(16).padStart(6, '0');
-            const titleCol = locked ? '#6a6a78' : '#ffffff';
-            this._mText(cx, cy - 55, t('chapter_label'), 38, locked ? '#56566a' : hexHue, 0.5, 0.5, '#000', 2);
-            this._mText(cx, cy + 20, '' + ch.id, 110, titleCol, 0.5, 0.5, locked ? '#000' : hexHue, 3);
+            // 2) силуэт финального босса главы — нависающая фигура по центру
+            const bossKey = this._tex(ch.boss3Key, 'boss3');
+            if (this.textures.exists(bossKey)) {
+                const boss = this._mAdd(this.add.image(cx, cy + 24, bossKey));
+                const bsrc = this.textures.get(bossKey).getSourceImage();
+                const bsc = (bsrc && bsrc.width) ? Math.min((r.w * 0.72) / bsrc.width, (r.h * 0.52) / bsrc.height) : 0.5;
+                boss.setScale(bsc).setTint(locked ? 0x2e2e38 : ch.hue).setAlpha(locked ? 0.12 : 0.42);
+            }
 
+            // 3) неон-рамка (+ внешнее свечение у выбранной)
+            this._mAdd(this.add.rectangle(cx, cy, r.w, r.h, 0x000000, 0)
+                .setStrokeStyle(sel ? 6 : 3, uiHue, locked ? 0.5 : 1));
+            if (sel && !locked) this._mAdd(this.add.rectangle(cx, cy, r.w + 16, r.h + 16, 0x000000, 0).setStrokeStyle(2, uiHue, 0.35));
+
+            // 4) бейдж-номер (сверху слева) + заголовок «ГЛАВА»
+            const bX = r.x + 50, bY = r.y + 46;
+            this._mAdd(this.add.rectangle(bX, bY, 74, 56, 0x000000, 0.5).setStrokeStyle(2, uiHue, locked ? 0.5 : 1));
+            this._mText(bX, bY, (ch.id < 10 ? '0' : '') + ch.id, 36, hexUi, 0.5, 0.5, '#000', 2);
+            this._mText(cx + 30, bY, t('chapter_label'), 30, locked ? '#6a6a78' : '#ffffff', 0.5, 0.5, '#000', 3);
+
+            // 5) шкала сложности (честно из hpMult: ×1.0 / ×1.6 / ×2.4)
+            const filled = [2, 3, 5][i] !== undefined ? [2, 3, 5][i] : Math.min(5, i * 2 + 2);
+            const dy = r.y + r.h - 128;
+            this._mText(cx, dy - 30, t('chapter_difficulty'), 22, locked ? '#6a6a78' : '#bfb8e0', 0.5, 0.5, '#000', 2);
+            const segN = 5, segW = 46, segH = 14, segGap = 10;
+            let sx = cx - (segN * segW + (segN - 1) * segGap) / 2;
+            for (let s = 0; s < segN; s++) {
+                const on = s < filled;
+                this._mAdd(this.add.rectangle(sx, dy, segW, segH, on ? uiHue : 0x2a2440, on ? 1 : 0.55)
+                    .setOrigin(0, 0.5).setStrokeStyle(1, on ? uiHue : 0x3a3450, 0.8));
+                sx += segW + segGap;
+            }
+
+            // 6) кнопка-пилюля «ИГРАТЬ» / замок «ЗАКРЫТО»
+            const py = r.y + r.h - 56;
             if (locked) {
-                this._mText(cx, r.y + r.h - 70, '[ ' + t('chapter_locked') + ' ]', 40, '#8a8a98', 0.5, 0.5, '#000', 3);
+                this._mAdd(this.add.rectangle(cx, py, 240, 56, 0x000000, 0.4).setStrokeStyle(2, 0x4a4a5a, 1));
+                this._mText(cx, py, t('chapter_locked'), 30, '#9a9aa8', 0.5, 0.5, '#000', 3);
             } else {
-                this._mText(cx, r.y + r.h - 70, sel ? '> ' + t('chapter_play') + ' <' : t('chapter_play'),
-                    sel ? 40 : 34, sel ? '#ffffff' : hexHue, 0.5, 0.5, '#c800ff', sel ? 3 : 2);
+                this._mAdd(this.add.rectangle(cx, py, 240, 56, sel ? ch.hue : 0x000000, sel ? 1 : 0.35)
+                    .setStrokeStyle(sel ? 0 : 3, ch.hue, 1));
+                this._mText(cx, py, t('chapter_play'), sel ? 34 : 30, sel ? '#0a0014' : hexUi, 0.5, 0.5, sel ? '#1a0030' : '#000', 2);
             }
         }
         // Кнопка «НАЗАД В ХАБ»: кликабельна мышью + подсветка при наведении (как в рекордах).

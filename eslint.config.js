@@ -15,6 +15,8 @@ module.exports = [
                 EnemyType: 'readonly', BossState: 'readonly', GoblinState: 'readonly',
                 CHAPTERS: 'readonly', getChapter: 'readonly', TEXTURE_MANIFEST: 'readonly',
                 ANIM_DIRS: 'readonly', UPGRADE_ICONS: 'readonly',
+                CARD_COUNT: 'readonly', CARD_TIER: 'readonly', CARD_MAX_LEVEL: 'readonly',
+                TIER: 'readonly', TIER_WEIGHTS: 'readonly',
                 LEGENDARY_UPGRADE_IDS: 'readonly', LEGENDARY_CARD_CHANCE: 'readonly',
                 ABILITY_COOLDOWNS: 'readonly', ABILITY_ICONS: 'readonly', ARTIFACTS: 'readonly',
                 ARTIFACT: 'readonly', hasArtifact: 'readonly',
@@ -23,13 +25,14 @@ module.exports = [
 
                 distSq: 'readonly', dist: 'readonly', normalize: 'readonly', randInt: 'readonly',
                 rgb: 'readonly', clamp8: 'readonly', clamp: 'readonly', fmtNum: 'readonly',
-                lbCompare: 'readonly', lbEmptyEntry: 'readonly', formatTime: 'readonly',
+                lbCompare: 'readonly', lbCompareScore: 'readonly', lbEmptyEntry: 'readonly', formatTime: 'readonly',
 
                 SaveSystem: 'readonly',
 
                 Player: 'readonly', Enemy: 'readonly', Bullet: 'readonly',
                 EnemyProjectile: 'readonly', BossSoul: 'readonly', Gem: 'readonly',
                 Coin: 'readonly', Vinyl: 'readonly', Particle: 'readonly', DamageText: 'readonly',
+                SkullProjectile: 'readonly', ShatterBomb: 'readonly', DeathFx: 'readonly', Sphere: 'readonly',
                 DEG: 'readonly',
 
                 EnemySpawner: 'readonly', findSpawnPos: 'readonly',

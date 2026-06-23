@@ -135,7 +135,21 @@ MainScene.prototype._buildChapterSelect = function() {
                     sel ? 40 : 34, sel ? '#ffffff' : hexHue, 0.5, 0.5, '#c800ff', sel ? 3 : 2);
             }
         }
-        this._mText(W / 2, H * 0.92, t('chapter_hint_back'), 30, '#7d78a0', 0.5, 0.5, '#000', 2);
+        // Кнопка «НАЗАД В ХАБ»: кликабельна мышью + подсветка при наведении (как в рекордах).
+        const backTxt = this._mText(W / 2, H * 0.92, t('chapter_hint_back'), 36, '#00ffc8', 0.5, 0);
+        const bpx = 40, bpy = 14; // запас под палец/мышь вокруг текста
+        this._chapterBackRect = { x: W / 2 - backTxt.width / 2 - bpx, y: H * 0.92 - bpy,
+                                  w: backTxt.width + 2 * bpx, h: backTxt.height + 2 * bpy };
+        this._chapterBackText = backTxt;   // ссылка для подсветки при наведении
+        this._chapterBackHover = false;
+    }
+
+MainScene.prototype._styleChapterBack = function(hover) {
+        const txt = this._chapterBackText; if (!txt) return;
+        // как у кнопок меню: подсветка = белый + розовая обводка + крупнее
+        txt.setColor(hover ? '#ffffff' : '#00ffc8')
+           .setStroke(hover ? '#ff0096' : '#000', hover ? 3 : 2)
+           .setFontSize(hover ? 42 : 36);
     }
 
 MainScene.prototype._buildSettings = function() {
@@ -625,6 +639,9 @@ MainScene.prototype.onPointerMove = function(p) {
             let ns = -1;
             for (let i = 0; i < CHAPTERS.length; i++) { const r = this._chapterCardRect(i); if (hit(r.x, r.y, r.w, r.h)) ns = i; }
             if (ns !== -1 && ns !== this.selectedChapterIndex) { this.selectedChapterIndex = ns; this.rebuildMenu(); }
+            const bk = this._chapterBackRect;
+            const over = !!(bk && hit(bk.x, bk.y, bk.w, bk.h));
+            if (over !== !!this._chapterBackHover) { this._chapterBackHover = over; this._styleChapterBack(over); }
         } else if (st === GameState.LEADERBOARD) {
             const bk = this._lbBackRect;
             const over = !!(bk && hit(bk.x, bk.y, bk.w, bk.h));
@@ -688,6 +705,8 @@ MainScene.prototype.onPointerDown = function(p) {
                 const r = this._chapterCardRect(i);
                 if (hit(r.x, r.y, r.w, r.h)) { this.selectedChapterIndex = i; this._chapterActivate(i); return; }
             }
+            const bk = this._chapterBackRect;
+            if (bk && hit(bk.x, bk.y, bk.w, bk.h)) { this.setState(GameState.LOBBY); return; }
         } else if (st === GameState.STAGE_CLEAR) {
             const r = this._stageClearHubRect();
             if (hit(r.x, r.y, r.w, r.h)) this._stageClearToHub();

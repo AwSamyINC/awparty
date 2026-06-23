@@ -14,7 +14,7 @@ const I18N = {
         chapter_label: 'CHAPTER',
         chapter_play: 'PLAY',
         chapter_locked: 'SOON',
-        chapter_hint_back: 'Esc — back to hub',
+        chapter_hint_back: 'BACK TO HUB',
 
         set_title: 'SETTINGS',
         set_grp_game: 'GAMEPLAY',
@@ -222,7 +222,7 @@ const I18N = {
         chapter_label: 'ГЛАВА',
         chapter_play: 'ИГРАТЬ',
         chapter_locked: 'СКОРО',
-        chapter_hint_back: 'Esc — назад в хаб',
+        chapter_hint_back: 'НАЗАД В ХАБ',
 
         set_title: 'НАСТРОЙКИ',
         set_grp_game: 'ИГРА',

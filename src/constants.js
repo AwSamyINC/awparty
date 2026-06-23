@@ -112,7 +112,7 @@ const C = {
         B3: { hp: 180, speed: 140, damage: 40, scale: 3.2 },
         BD: { hp: 180, speed: 110, damage: 50, scale: 3.2 },
         BB: { hp: 130, speed: 150, damage: 60, scale: 3.5 },
-        BS: { hp: 220, speed: 180, damage: 60, scale: 3.2 },
+        BS: { hp: 220, speed: 180, damage: 60, scale: 3.6 }, // split-босс = Босс 3 главы 2 (чуть крупнее обычного B3)
     },
 
     BOSSBASS: {

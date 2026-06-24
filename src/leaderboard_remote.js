@@ -43,12 +43,27 @@ const RemoteLeaderboard = {
             .catch(() => cb(null));
     },
 
-    submit(name, score, time, mode, chapter, cb) {
+    // Старт забега: сервер выдаёт одноразовый runid (nonce) и хранит его. Нужен,
+    // чтобы submit принимал только результат реально начатого забега (см. SECURITY.md).
+    // Возвращает uuid в cb, либо null (офлайн/ошибка/Supabase не сконфигурен).
+    startRun(cid, mode, chapter, cb) {
+        if (!this.configured()) { if (cb) cb(null); return; }
+        fetch(SUPABASE_URL + '/rest/v1/rpc/start_run', {
+            method: 'POST',
+            headers: this._headers(),
+            body: JSON.stringify({ p_cid: cid || '', p_mode: mode || 'normal', p_chapter: chapter || 1 }),
+        })
+            .then(r => r.ok ? r.json() : Promise.reject(r.status))
+            .then(runid => { if (cb) cb(runid || null); })
+            .catch(() => { if (cb) cb(null); });
+    },
+
+    submit(name, score, time, mode, chapter, runid, cb) {
         if (!this.configured()) { if (cb) cb(false); return; }
         fetch(SUPABASE_URL + '/rest/v1/rpc/submit_score', {
             method: 'POST',
             headers: Object.assign(this._headers(), { 'Prefer': 'return=minimal' }),
-            body: JSON.stringify({ p_name: name, p_score: score, p_time: time, p_mode: mode || 'normal', p_chapter: chapter || 1 }),
+            body: JSON.stringify({ p_name: name, p_score: score, p_time: time, p_mode: mode || 'normal', p_chapter: chapter || 1, p_runid: runid || null }),
         })
             .then(r => { if (cb) cb(r.ok); })
             .catch(() => { if (cb) cb(false); });

@@ -1053,6 +1053,10 @@ class MainScene extends Phaser.Scene {
     // Старт нового забега: сброс + бесплатная стартовая карта (затем PLAYING по выбору).
     _startRun() {
         Analytics.track('run_start', { chapter: this.currentChapter, mode: this._runMode() });
+        // Серверный nonce забега: запрос async, забег идёт минуты — токен успевает прийти
+        // задолго до финиша. Финиш (submit_score) примет только этот активный runid.
+        this.activeRunId = null;
+        RemoteLeaderboard.startRun(Analytics._cid(), this._runMode(), this.currentChapter, (id) => { this.activeRunId = id; });
         this.resetGame();
         this.triggerFirstCard();
     }

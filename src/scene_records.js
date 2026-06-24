@@ -30,7 +30,7 @@ MainScene.prototype._submitChapterResult = function(name) {
         name = (name || '').trim() || 'Anonymous';
         if (name !== 'Anonymous') { this.save.playerName = name; this.saveGame(); }
         this.tryAddToLeaderboard(this.runScore, this.survivalTimer, name, mode, chapter);
-        RemoteLeaderboard.submit(name, this.runScore, this.survivalTimer, mode, chapter, null);
+        RemoteLeaderboard.submit(name, this.runScore, this.survivalTimer, mode, chapter, this.activeRunId, null);
         this._lastRank = null;
         RemoteLeaderboard.fetchRank(chapter, mode, this.survivalTimer, this.runScore, name, (rank) => {
             this._lastRank = rank;

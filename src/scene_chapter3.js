@@ -39,6 +39,7 @@ MainScene.prototype._updateChapter3 = function(dt, px, py) {
             case 'S2_MOBS':
                 if (this.phaseKills >= Math.floor(N2 / 2)) {
                     this._ch3SpawnMidBoss('B2', px, py);
+                    this._ch3NoSpawn = true; // пока босс жив — мобы не спавнятся
                     this._ch3Beat = 'S2_MIDBOSS';
                 }
                 break;
@@ -58,6 +59,7 @@ MainScene.prototype._updateChapter3 = function(dt, px, py) {
             case 'S3_MOBS':
                 if (this.phaseKills >= Math.floor(N3 / 2)) {
                     this._ch3SpawnMidBoss('RHINO', px, py);
+                    this._ch3NoSpawn = true; // пока босс жив — мобы не спавнятся
                     this._ch3Beat = 'S3_MIDBOSS';
                 }
                 break;

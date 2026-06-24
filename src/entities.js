@@ -1601,7 +1601,7 @@ class Sphere {
         this.sprite.rotation += dt * 4;
         const dmg = Math.max(1, Math.floor(p.attackDamage * C.SPHERE.DAMAGE_MULT + 0.5));
         for (const e of scene.enemies) {
-            if (e.sphereCd > 0) continue;
+            if (e.sphereCd > 0 || e.spawning || e.hp <= 0) continue;
             if (distSq(ox, oy, e.sprite.x, e.sprite.y) < C.SPHERE.HIT_DIST_SQ) {
                 e.hp -= dmg;
                 e.hitFlashTimer = 0.12;

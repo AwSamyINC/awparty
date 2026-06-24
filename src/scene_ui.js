@@ -994,7 +994,9 @@ MainScene.prototype.onKeyDown = function(e) {
             }
             if (enter) this._settingsActivate();
             if (esc) { this.saveGame(); this.setState(GameState.MENU); }
-            if (e.key && e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
+            // Дев-чит работает только при ?debug=1 в URL — обычным игрокам не отгружается.
+            const cheatsOn = location.search.indexOf('debug=1') !== -1;
+            if (cheatsOn && e.key && e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
                 this.cheatBuffer = (this.cheatBuffer + e.key.toLowerCase()).slice(-32);
                 if (this.cheatBuffer.indexOf('givecoinz') !== -1) {
                     this.save.totalCoins += 500; this.cheatMessage = t('cheat_gave'); this.cheatMessageTimer = 3;

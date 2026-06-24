@@ -36,7 +36,7 @@ MainScene.prototype._bulletEnemyCollisions = function() {
                     if (c < 0 || c >= cols) continue;
                     const cell = grid[r * cols + c];
                     for (const e of cell) {
-                        if (e.hp <= 0 || b.lastHit === e) continue;
+                        if (e.hp <= 0 || e.spawning || b.lastHit === e) continue;
                         const hitDist = e.isBoss ? C.COLLISION.BOSS_HIT_SQ : C.COLLISION.BULLET_HIT_SQ;
                         if (distSq(e.sprite.x, e.sprite.y, bx, by) < hitDist) {
                             e.hp -= b.damage;

@@ -878,6 +878,7 @@ class MainScene extends Phaser.Scene {
         else if (id === 1) {
             const slamDmg = A.SLAM_DAMAGE;
             for (const e of this.enemies) {
+                if (e.spawning) continue;
                 const dq = distSq(e.sprite.x, e.sprite.y, px, py);
                 if (dq < C.SLAM_RADIUS * C.SLAM_RADIUS && dq > 0.001) {
                     e.hp -= slamDmg; e.hitFlashTimer = 0.12;
@@ -913,6 +914,7 @@ class MainScene extends Phaser.Scene {
             const n = normalize(dx, dy);
             const len = A.LASER_LENGTH, halfW = A.LASER_HALF_WIDTH, dmg = A.LASER_DAMAGE;
             for (const e of this.enemies) {
+                if (e.spawning) continue;
                 const rx = e.sprite.x - px, ry = e.sprite.y - py;
                 const proj = rx * n.x + ry * n.y;
                 if (proj > 0 && proj < len) {

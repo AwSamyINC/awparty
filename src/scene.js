@@ -174,6 +174,11 @@ class MainScene extends Phaser.Scene {
         this._refreshRemoteLeaderboard('hardcore');
 
         if (window.__awHideLoader) window.__awHideLoader();
+
+        Analytics.track('session_start', {
+            lang: this.save.language || '',
+            chapterUnlocked: this.save.maxChapterUnlocked || 1,
+        });
     }
 
     addWorld(o) { this.worldLayer.add(o); return o; }
@@ -1047,6 +1052,7 @@ class MainScene extends Phaser.Scene {
 
     // Старт нового забега: сброс + бесплатная стартовая карта (затем PLAYING по выбору).
     _startRun() {
+        Analytics.track('run_start', { chapter: this.currentChapter, mode: this._runMode() });
         this.resetGame();
         this.triggerFirstCard();
     }

@@ -3,6 +3,11 @@ MainScene.prototype._runMode = function() { return this.save.isHardcoreMode ? 'h
 
 MainScene.prototype.onPlayerDeath = function() {
         this.isGameOver = true;
+        Analytics.track('run_end', {
+            chapter: this.currentChapter, mode: this._runMode(), outcome: 'death',
+            phase: this.gamePhase, kills: this.killCount,
+            time: Math.floor(this.survivalTimer), score: this.runScore,
+        });
         this.audio.play('sfx_player_death', { volume: 0.9 });
         this.saveGame();
         if (this._firstBossKilled && !this.save.playerName) {
@@ -17,6 +22,11 @@ MainScene.prototype.onPlayerDeath = function() {
 
 MainScene.prototype._submitChapterResult = function(name) {
         const mode = this._runMode(), chapter = this.currentChapter;
+        Analytics.track('run_end', {
+            chapter: chapter, mode: mode, outcome: 'clear',
+            phase: this.gamePhase, kills: this.killCount,
+            time: Math.floor(this.survivalTimer), score: this.runScore,
+        });
         name = (name || '').trim() || 'Anonymous';
         if (name !== 'Anonymous') { this.save.playerName = name; this.saveGame(); }
         this.tryAddToLeaderboard(this.runScore, this.survivalTimer, name, mode, chapter);

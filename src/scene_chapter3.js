@@ -37,17 +37,32 @@ MainScene.prototype._updateChapter3 = function(dt, px, py) {
 
         // Предупреждение «Attention» перед спавном: режиссёр гл.3 не трогает
         // phase*Timer/phase*BossSpawned, на которые завязан штатный варн в HUD,
-        // поэтому имминентность боссов считаем здесь по тем же порогам, что и спавн.
+        // поэтому считаем его здесь. У боссов гл.3 НЕТ тайм-капа (спавн чисто по
+        // килам), поэтому без страховки кемпящий игрок держал бы варн бесконечно.
+        //   warn — игрок в окне предупреждения (порог - W килов);
+        //   due  — штатное условие спавна по килам;
+        //   _ch3WarnTimer копится, пока warn активен → форс-спавн через BOSS_WARN_LEAD сек.
+        // Так предупреждение всегда разрешается появлением босса и не звучит вечно.
         const W = C.BOSS_WARN_KILLS;
-        let imminent = false;
-        if (this._ch3Beat === 'S2_MOBS') imminent = this.phaseKills >= Math.floor(N2 / 2) - W;
-        else if (this._ch3Beat === 'S3_MOBS') imminent = this.phaseKills >= Math.floor(N3 / 2) - W;
-        else if (this._ch3Beat === 'S3_CLEAR') imminent = this._ch3Breather <= 0 && (this.phaseKills - this._ch3KillMark) >= C3.AFTER_RHINO_KILLS - W;
-        this._ch3BossImminent = imminent;
+        let warn = false, due = false;
+        if (this._ch3Beat === 'S2_MOBS') {
+            const need = Math.floor(N2 / 2);
+            warn = this.phaseKills >= need - W; due = this.phaseKills >= need;
+        } else if (this._ch3Beat === 'S3_MOBS') {
+            const need = Math.floor(N3 / 2);
+            warn = this.phaseKills >= need - W; due = this.phaseKills >= need;
+        } else if (this._ch3Beat === 'S3_CLEAR') {
+            const k = this.phaseKills - this._ch3KillMark;
+            warn = this._ch3Breather <= 0 && k >= C3.AFTER_RHINO_KILLS - W;
+            due  = this._ch3Breather <= 0 && k >= C3.AFTER_RHINO_KILLS;
+        }
+        if (warn) this._ch3WarnTimer += dt; else this._ch3WarnTimer = 0;
+        const spawnNow = due || (warn && this._ch3WarnTimer >= C3.BOSS_WARN_LEAD);
+        this._ch3BossImminent = warn;
 
         switch (this._ch3Beat) {
             case 'S2_MOBS':
-                if (this.phaseKills >= Math.floor(N2 / 2)) {
+                if (spawnNow) {
                     this._ch3SpawnMidBoss('B2', px, py);
                     this._ch3NoSpawn = true; // пока босс жив — мобы не спавнятся
                     this._ch3Beat = 'S2_MIDBOSS';
@@ -67,7 +82,7 @@ MainScene.prototype._updateChapter3 = function(dt, px, py) {
                 }
                 break;
             case 'S3_MOBS':
-                if (this.phaseKills >= Math.floor(N3 / 2)) {
+                if (spawnNow) {
                     this._ch3SpawnMidBoss('RHINO', px, py);
                     this._ch3NoSpawn = true; // пока босс жив — мобы не спавнятся
                     this._ch3Beat = 'S3_MIDBOSS';
@@ -82,7 +97,7 @@ MainScene.prototype._updateChapter3 = function(dt, px, py) {
                 }
                 break;
             case 'S3_CLEAR':
-                if (this._ch3Breather <= 0 && (this.phaseKills - this._ch3KillMark) >= C3.AFTER_RHINO_KILLS) {
+                if (spawnNow) {
                     this._ch3SpawnDuet(px, py);
                     this._ch3NoSpawn = true; // подавляем мобов на время боя дуэта
                     this._ch3Beat = 'S3_DUET';

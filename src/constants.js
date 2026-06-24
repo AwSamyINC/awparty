@@ -229,14 +229,18 @@ const CHAPTERS = [
       floorKey: 'floor3', floorTint: 0xff6464, floorMode: 'stretch',
       enemyKey: 'enemy', goblinKey: 'enemyV',
       boss1Key: 'enemy', boss2Key: 'boss2', boss3Key: 'boss3',
-      arenaW: 5000, arenaH: 5000, custom: 'CH3', encircleEvent: true,
+      arenaW: 4000, arenaH: 4000, custom: 'CH3', encircleEvent: true,
       hpMult: 2.4, dmgMult: 1.8, spawnMult: 1.4, bossHpMult: 2.6 },
 ];
 function getChapter(id) { return CHAPTERS.find(c => c.id === id) || CHAPTERS[0]; }
 
+// Стрелки к оставшимся врагам показываются, когда живых не-боссов не больше этого.
+C.LAST_ENEMY_ARROW_MAX = 3;
+
 C.CHAPTER3 = {
     STAGE2_KILLS: 60,       // кап убийств этапа 2 (мид-босс B2 на половине)
-    STAGE3_KILLS: 70,       // кап убийств этапа 3 (Носорог на половине, затем дуэт)
+    STAGE3_KILLS: 70,       // этап 3: Носорог на половине (STAGE3_KILLS/2)
+    AFTER_RHINO_KILLS: 50,  // после Носорога убить столько мобов -> финальный дуэт
     BREATHER: 4,            // сек паузы спавна после смерти мид-босса
     HARDCORE_KILL_MULT: 1.5,
     mosherKey: 'enemy2_mosher',

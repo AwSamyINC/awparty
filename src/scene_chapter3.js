@@ -65,12 +65,14 @@ MainScene.prototype._updateChapter3 = function(dt, px, py) {
                 break;
             case 'S3_MIDBOSS':
                 if (!midAlive) {
+                    // Носорог мёртв: передышка, затем нужно убить ещё AFTER_RHINO_KILLS мобов.
                     this._ch3Breather = C3.BREATHER; this._ch3NoSpawn = true;
+                    this._ch3KillMark = this.phaseKills;
                     this._ch3Beat = 'S3_CLEAR';
                 }
                 break;
             case 'S3_CLEAR':
-                if (this._ch3Breather <= 0 && this.phaseKills >= N3) {
+                if (this._ch3Breather <= 0 && (this.phaseKills - this._ch3KillMark) >= C3.AFTER_RHINO_KILLS) {
                     this._ch3SpawnDuet(px, py);
                     this._ch3NoSpawn = true; // подавляем мобов на время боя дуэта
                     this._ch3Beat = 'S3_DUET';
@@ -108,10 +110,13 @@ MainScene.prototype._ch3SpawnMidBoss = function(kind, px, py) {
 MainScene.prototype._ch3SpawnDuet = function(px, py) {
         const da = this._tex(C.CHAPTER3.doctorArt, 'c2_boss1');
         const ta = this._tex(C.CHAPTER3.teleporterArt, 'boss3');
-        const p1 = findSpawnPos(px, py, this.arenaW, this.arenaH, 800);
-        const doc = new Enemy(this, p1.x, p1.y, da); doc.makeBossDoctor(da);
-        const p2 = findSpawnPos(px, py, this.arenaW, this.arenaH, 800);
-        const tp = new Enemy(this, p2.x, p2.y, ta); tp.makeBoss3(ta);
+        // Оба босса спавнятся рядом друг с другом: одна точка + смещение по горизонтали.
+        const p = findSpawnPos(px, py, this.arenaW, this.arenaH, 800);
+        const off = 170;
+        const dxL = clamp(p.x - off, 60, this.arenaW - 60);
+        const dxR = clamp(p.x + off, 60, this.arenaW - 60);
+        const doc = new Enemy(this, dxL, p.y, da); doc.makeBossDoctor(da);
+        const tp = new Enemy(this, dxR, p.y, ta); tp.makeBoss3(ta);
         for (const b of [doc, tp]) {
             this._applyChapterBoss(b);
             if (this.save.isHardcoreMode) { b.speed *= 1.3; b.hp *= 2; b.maxHp *= 2; }

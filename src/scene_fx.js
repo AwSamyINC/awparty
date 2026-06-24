@@ -258,25 +258,12 @@ MainScene.prototype._drawPortal = function(g) {
         g.fillCircle(px, py, R * 0.16 + 4 * pulse);
     };
 
-MainScene.prototype._drawBossArrow = function() {
-        const g = this.bossArrowFx;
-        g.clear();
-        if (this.isGameOver) return;
-        let tx, ty, col;
-        if (this.crazyMode && this.portal) {
-            tx = this.portal.x; ty = this.portal.y; col = rgb(0, 230, 255);
-        } else {
-            let boss = null;
-            for (const e of this.enemies) { if (e.isBoss) { boss = e; break; } }
-            if (!boss) return;
-            tx = boss.sprite.x; ty = boss.sprite.y;
-            col = boss.isBoss3 ? rgb(0, 230, 255) : boss.isBoss2 ? rgb(200, 0, 255) : rgb(255, 40, 60);
-        }
-
+// Рисует стрелку на краю экрана к мировой точке (tx,ty), если она за кадром.
+MainScene.prototype._drawEdgeArrow = function(g, tx, ty, col) {
         const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT, margin = 70;
         const view = this.cameras.main.worldView;
         const sx = tx - view.x, sy = ty - view.y;
-        if (sx >= margin && sx <= W - margin && sy >= margin && sy <= H - margin) return;
+        if (sx >= margin && sx <= W - margin && sy >= margin && sy <= H - margin) return; // на экране — стрелка не нужна
 
         const cx = W / 2, cy = H / 2;
         const ang = Math.atan2(sy - cy, sx - cx);
@@ -303,4 +290,34 @@ MainScene.prototype._drawBossArrow = function() {
         g.beginPath(); g.moveTo(tip.x, tip.y); g.lineTo(b1.x, b1.y); g.lineTo(b2.x, b2.y); g.closePath(); g.fillPath();
         g.lineStyle(2, 0xffffff, 0.85 * pulse);
         g.beginPath(); g.moveTo(tip.x, tip.y); g.lineTo(b1.x, b1.y); g.lineTo(b2.x, b2.y); g.closePath(); g.strokePath();
+    };
+
+MainScene.prototype._drawBossArrow = function() {
+        const g = this.bossArrowFx;
+        g.clear();
+        if (this.isGameOver) return;
+        if (this.crazyMode && this.portal) {
+            this._drawEdgeArrow(g, this.portal.x, this.portal.y, rgb(0, 230, 255));
+        } else {
+            let boss = null;
+            for (const e of this.enemies) { if (e.isBoss) { boss = e; break; } }
+            if (boss) {
+                const col = boss.isBoss3 ? rgb(0, 230, 255) : boss.isBoss2 ? rgb(200, 0, 255) : rgb(255, 40, 60);
+                this._drawEdgeArrow(g, boss.sprite.x, boss.sprite.y, col);
+            }
+        }
+        this._drawLastEnemyArrows(g);
+    };
+
+// Когда живых обычных врагов осталось мало — стрелки к каждому за кадром (найти последних).
+MainScene.prototype._drawLastEnemyArrows = function(g) {
+        if (this.crazyMode) return;
+        let count = 0;
+        for (const e of this.enemies) if (!e.isBoss && !e.spawning && e.hp > 0) count++;
+        if (count === 0 || count > C.LAST_ENEMY_ARROW_MAX) return;
+        const col = rgb(255, 210, 60);
+        for (const e of this.enemies) {
+            if (e.isBoss || e.spawning || e.hp <= 0) continue;
+            this._drawEdgeArrow(g, e.sprite.x, e.sprite.y, col);
+        }
     };

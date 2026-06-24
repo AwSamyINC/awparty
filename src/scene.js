@@ -394,7 +394,7 @@ class MainScene extends Phaser.Scene {
         this.phaseKills = 0;
         this._encPhase = 0; this._encTimer = 0; this._encAt = 0; this._encDone = false;
         this._ch3Beat = 'S2_MOBS'; this._ch3NoSpawn = false; this._ch3Breather = 0;
-        this._ch3LastPhase = GamePhase.PHASE_1;
+        this._ch3LastPhase = GamePhase.PHASE_1; this._ch3KillMark = 0;
         this._firstCardScreen = false;
 
         this._enemyKey = this._tex(this.chapter.enemyKey, 'enemy');

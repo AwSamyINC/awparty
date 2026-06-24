@@ -534,7 +534,7 @@ class MainScene extends Phaser.Scene {
 
         const px = p.sprite.x, py = p.sprite.y;
 
-        if (p.isMoving && randInt(100) < 20) {
+        if (p.isMoving && Math.random() < C.DUST_PER_SEC * dt) {
             const dust = this.spawnParticle(px + (randInt(30) - 15), py + p.sprite.displayHeight / 2 - 10, rgb(150, 150, 150));
             dust.vx = randInt(40) - 20; dust.vy = -(randInt(50) + 20);
             dust.maxLifetime = 0.4; dust.lifetime = 0.4;

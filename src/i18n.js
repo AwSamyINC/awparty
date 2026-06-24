@@ -80,6 +80,7 @@ const I18N = {
         err_server: 'Server error, try again',
 
         levelup: 'LEVEL UP!',
+        first_card: 'STARTING CARD',
         ability_choose: 'CHOOSE AN ABILITY',
         cooldown: 'Cooldown',
         ability_desc_0: 'Become invulnerable\nfor 2 seconds.',
@@ -290,6 +291,7 @@ const I18N = {
         err_server: 'Ошибка сервера, попробуйте снова',
 
         levelup: 'НОВЫЙ УРОВЕНЬ!',
+        first_card: 'СТАРТОВАЯ КАРТА',
         ability_choose: 'ВЫБЕРИТЕ СПОСОБНОСТЬ',
         cooldown: 'Перезарядка',
         ability_desc_0: 'Неуязвимость\nна 2 секунды.',

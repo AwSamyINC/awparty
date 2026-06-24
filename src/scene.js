@@ -395,6 +395,7 @@ class MainScene extends Phaser.Scene {
         this._encPhase = 0; this._encTimer = 0; this._encAt = 0; this._encDone = false;
         this._ch3Beat = 'S2_MOBS'; this._ch3NoSpawn = false; this._ch3Breather = 0;
         this._ch3LastPhase = GamePhase.PHASE_1;
+        this._firstCardScreen = false;
 
         this._enemyKey = this._tex(this.chapter.enemyKey, 'enemy');
         this._goblinKey = this._tex(this.chapter.goblinKey, 'enemyV');
@@ -977,14 +978,7 @@ class MainScene extends Phaser.Scene {
         this.abilityMaxCooldowns[slot] = this.abilityCooldowns[slot];
     }
 
-    triggerLevelUp() {
-        const p = this.player;
-        p.level++;
-        p.currentXP -= p.xpToNextLevel;
-        p.xpToNextLevel += C.XP_STEP;
-        p.hp = Math.min(p.maxHp, p.hp + 20);
-        this.levelUpAnimTimer = 0;
-
+    _rollCardIds() {
         const avail = (id) => this.runUpgradeLevels[id] < CARD_MAX_LEVEL[id];
         const poolByTier = (tier, taken) => {
             const out = [];
@@ -998,7 +992,6 @@ class MainScene extends Phaser.Scene {
             for (let td = 0; td < 3; td++) { if (r < TIER_WEIGHTS[td]) return td; r -= TIER_WEIGHTS[td]; }
             return TIER.COMMON;
         };
-
         const ids = [];
         for (let slot = 0; slot < 3; slot++) {
             let cand = poolByTier(rollTier(), ids);
@@ -1009,13 +1002,43 @@ class MainScene extends Phaser.Scene {
             if (cand.length === 0) break;
             ids.push(cand[randInt(cand.length)]);
         }
+        return ids;
+    }
 
-        if (ids.length === 0) { p.hp = p.maxHp; this.setState(GameState.PLAYING); return; }
-
+    _showCardScreen(ids) {
         this.levelUpIds = ids;
         this.selectedLevelUpIndex = -1;
         this.audio.play('sfx_levelup', { volume: 0.55 });
         this.setState(GameState.LEVEL_UP);
+    }
+
+    triggerLevelUp() {
+        const p = this.player;
+        p.level++;
+        p.currentXP -= p.xpToNextLevel;
+        p.xpToNextLevel += C.XP_STEP;
+        p.hp = Math.min(p.maxHp, p.hp + 20);
+        this.levelUpAnimTimer = 0;
+        this._firstCardScreen = false;
+
+        const ids = this._rollCardIds();
+        if (ids.length === 0) { p.hp = p.maxHp; this.setState(GameState.PLAYING); return; }
+        this._showCardScreen(ids);
+    }
+
+    // Бесплатный выбор стартовой карты при появлении персонажа (без уровня/XP/хила).
+    triggerFirstCard() {
+        this.levelUpAnimTimer = 0;
+        this._firstCardScreen = true;
+        const ids = this._rollCardIds();
+        if (ids.length === 0) { this.setState(GameState.PLAYING); return; }
+        this._showCardScreen(ids);
+    }
+
+    // Старт нового забега: сброс + бесплатная стартовая карта (затем PLAYING по выбору).
+    _startRun() {
+        this.resetGame();
+        this.triggerFirstCard();
     }
 
     applyUpgrade(id) {
@@ -1036,6 +1059,7 @@ class MainScene extends Phaser.Scene {
         p.messageTimer = 2.0;
         if (id >= 0 && id < CARD_COUNT) this.runUpgradeLevels[id]++;
         this.selectedLevelUpIndex = -1;
+        this._firstCardScreen = false;
         p.currentCooldown = Math.max(p.currentCooldown, 0.2);
         this.setState(GameState.PLAYING);
     }

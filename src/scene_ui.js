@@ -548,7 +548,7 @@ MainScene.prototype._buildRenameInput = function() {
 MainScene.prototype._buildLevelUp = function() {
         const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT;
         this._mAdd(this.add.rectangle(0, 0, W, H, 0x0a001e, 220 / 255).setOrigin(0, 0));
-        this._mText(W / 2, 150, t('levelup'), 100, '#ffff00', 0.5, 0.5, '#ff0096', 5);
+        this._mText(W / 2, 150, this._firstCardScreen ? t('first_card') : t('levelup'), 100, '#ffff00', 0.5, 0.5, '#ff0096', 5);
         this.levelUpCards = [];
         const n = this.levelUpIds.length;
         const TIER_STYLE = [
@@ -789,8 +789,7 @@ MainScene.prototype._chapterActivate = function(i) {
         if (ch.id > this.save.maxChapterUnlocked) { this.audio.play('sfx_menu_click', { volume: 0.4 }); return; }
         this.audio.play('sfx_menu_click');
         this.currentChapter = ch.id;
-        this.resetGame();
-        this.setState(GameState.PLAYING);
+        this._startRun();
     }
 MainScene.prototype._settingsActivate = function() {
         this.audio.play('sfx_menu_click');
@@ -938,7 +937,7 @@ MainScene.prototype._pauseActivate = function() {
         this.audio.play('sfx_menu_click');
         const i = this.selectedPauseIndex;
         if (i === 0) this.setState(GameState.PLAYING);
-        else if (i === 1) { this.resetGame(); this.setState(GameState.PLAYING); }
+        else if (i === 1) { this._startRun(); }
         else if (i === 2) { this.saveGame(); this.setState(GameState.LOBBY); }
     }
 
@@ -1029,7 +1028,7 @@ MainScene.prototype.onKeyDown = function(e) {
             if (enter || esc) this._stageClearToHub();
         } else if (st === GameState.PLAYING) {
             if (this.isGameOver) {
-                if (code === 'KeyR') { this.saveGame(); this.resetGame(); this.rebuildMenu(); }
+                if (code === 'KeyR') { this.saveGame(); this._startRun(); }
                 if (code === 'KeyQ') { this.saveGame(); this.setState(GameState.LOBBY); }
                 if (code === 'KeyL') { this.leaderboardFromMenu = false; this._pendingHighlight = null; this.lbView = 'normal'; this.lbChapter = 1; this.setState(GameState.LEADERBOARD); }
             } else {

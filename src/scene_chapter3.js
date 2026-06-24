@@ -35,6 +35,16 @@ MainScene.prototype._updateChapter3 = function(dt, px, py) {
 
         const midAlive = this.enemies.some(e => e._ch3MidBoss && e.hp > 0);
 
+        // Предупреждение «Attention» перед спавном: режиссёр гл.3 не трогает
+        // phase*Timer/phase*BossSpawned, на которые завязан штатный варн в HUD,
+        // поэтому имминентность боссов считаем здесь по тем же порогам, что и спавн.
+        const W = C.BOSS_WARN_KILLS;
+        let imminent = false;
+        if (this._ch3Beat === 'S2_MOBS') imminent = this.phaseKills >= Math.floor(N2 / 2) - W;
+        else if (this._ch3Beat === 'S3_MOBS') imminent = this.phaseKills >= Math.floor(N3 / 2) - W;
+        else if (this._ch3Beat === 'S3_CLEAR') imminent = this._ch3Breather <= 0 && (this.phaseKills - this._ch3KillMark) >= C3.AFTER_RHINO_KILLS - W;
+        this._ch3BossImminent = imminent;
+
         switch (this._ch3Beat) {
             case 'S2_MOBS':
                 if (this.phaseKills >= Math.floor(N2 / 2)) {

@@ -394,7 +394,7 @@ class MainScene extends Phaser.Scene {
         this.phaseKills = 0;
         this._encPhase = 0; this._encTimer = 0; this._encAt = 0; this._encDone = false;
         this._ch3Beat = 'S2_MOBS'; this._ch3NoSpawn = false; this._ch3Breather = 0;
-        this._ch3LastPhase = GamePhase.PHASE_1; this._ch3KillMark = 0;
+        this._ch3LastPhase = GamePhase.PHASE_1; this._ch3KillMark = 0; this._ch3BossImminent = false;
         this._firstCardScreen = false;
 
         this._enemyKey = this._tex(this.chapter.enemyKey, 'enemy');
@@ -1116,6 +1116,8 @@ class MainScene extends Phaser.Scene {
             (timer > C.BOSS_TIME_CAP - 3 || this.phaseKills >= this._bossKillReq(step) - C.BOSS_WARN_KILLS);
         if (this.gamePhase === GamePhase.PHASE_1 && bossImminent(this.survivalTimer, 1, this.spawner.bossSpawned)) {
             warning = true; warnCol = '#ff0000';
+        } else if (this.chapter && this.chapter.custom === 'CH3' && this._ch3BossImminent && !this.isGameOver) {
+            warning = true; warnCol = '#ff5050';
         } else if (this.gamePhase === GamePhase.PHASE_2 && bossImminent(this.phase2Timer, 2, this.phase2BossSpawned)) {
             warning = true; warnCol = '#b46bff';
         } else if (this.gamePhase === GamePhase.PHASE_3 && bossImminent(this.phase3Timer, 3, this.phase3BossSpawned)) {

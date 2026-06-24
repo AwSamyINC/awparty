@@ -566,8 +566,9 @@ class Enemy {
                     s.angle = k * 540;
                     if (this.strobeTimer >= shrinkDur) {
                         const ang = Math.random() * Math.PI * 2;
-                        s.x = clamp(px + Math.cos(ang) * 600, 150, 2850);
-                        s.y = clamp(py + Math.sin(ang) * 600, 150, 2850);
+                        const m = 150;
+                        s.x = clamp(px + Math.cos(ang) * 600, m, this.scene.arenaW - m);
+                        s.y = clamp(py + Math.sin(ang) * 600, m, this.scene.arenaH - m);
                         this._teleported = true;
                         this.strobeTimer = 0;
                         this.burstCount = 0;

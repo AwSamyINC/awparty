@@ -299,11 +299,13 @@ MainScene.prototype._drawBossArrow = function() {
         if (this.crazyMode && this.portal) {
             this._drawEdgeArrow(g, this.portal.x, this.portal.y, rgb(0, 230, 255));
         } else {
-            let boss = null;
-            for (const e of this.enemies) { if (e.isBoss) { boss = e; break; } }
-            if (boss) {
-                const col = boss.isBoss3 ? rgb(0, 230, 255) : boss.isBoss2 ? rgb(200, 0, 255) : rgb(255, 40, 60);
-                this._drawEdgeArrow(g, boss.sprite.x, boss.sprite.y, col);
+            // Стрелка к КАЖДОМУ боссу за кадром (не только к первому): дуэт гл.3
+            // (Врач + Телепортёр) и любые мультибосс-бои. _drawEdgeArrow ничего не
+            // рисует, если цель уже на экране.
+            for (const e of this.enemies) {
+                if (!e.isBoss) continue;
+                const col = e.isBoss3 ? rgb(0, 230, 255) : e.isBoss2 ? rgb(200, 0, 255) : rgb(255, 40, 60);
+                this._drawEdgeArrow(g, e.sprite.x, e.sprite.y, col);
             }
         }
         this._drawLastEnemyArrows(g);

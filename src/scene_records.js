@@ -75,14 +75,14 @@ MainScene.prototype._refreshRemoteLeaderboard = function(mode, chapter) {
         RemoteLeaderboard.fetchTop(10, mode, chapter, sort, (rows) => {
             if (sort !== this.lbSort) return;
             if (!rows) return;                       // ошибка/офлайн → оставить локальную доску как есть
-            // Пустой онлайн-ответ (на сервере нет записей этой доски) НЕ должен затирать
-            // локальные рекорды: иначе только что заработанный локальный рекорд исчезает с экрана.
-            // Перезаписываем онлайн-данными только когда они реально есть (иначе фолбэк на локальные).
-            if (rows.length > 0) {
-                const lb = [];
-                for (let i = 0; i < 10; i++) lb.push(rows[i] || lbEmptyEntry());
-                this.leaderboards[mode][chapter] = lb;
-            }
+            // Сливаем онлайн-топ с локально сохранёнными рекордами этого устройства.
+            // Раньше онлайн-ответ ПОЛНОСТЬЮ затирал доску (когда rows.length > 0): если
+            // онлайн-сабмит игрока был отклонён (нет/протух runid, rate-limit, пол времени,
+            // устаревший кэш клиента), его локально записанный рекорд исчезал при первом же
+            // обновлении экрана — «игроки периодически пропадают». Теперь онлайн-записи
+            // авторитетны (для своих имён), а локальные рекорды, которых нет в онлайне,
+            // остаются как фолбэк → заработанный рекорд больше не пропадает с экрана.
+            this.leaderboards[mode][chapter] = this._mergeLeaderboard(rows, mode, chapter, sort);
             if (this.lbView === mode && this.lbChapter === chapter) {
                 this.leaderboardNewEntryIndex = -1;
                 const h = this._pendingHighlight;
@@ -93,6 +93,31 @@ MainScene.prototype._refreshRemoteLeaderboard = function(mode, chapter) {
                 if (this.currentState === GameState.LEADERBOARD) this.rebuildMenu();
             }
         });
+    }
+
+// Слияние онлайн-топа и локально сохранённой доски устройства. Онлайн-записи
+// авторитетны для своих имён (общая правда таблицы); локальные рекорды, чьих имён нет
+// в онлайне, добавляются как фолбэк (заработанный, но не засабмиченный онлайн результат
+// не должен пропадать с экрана). Сортировка по активной метрике, топ-10, добивка пустыми.
+MainScene.prototype._mergeLeaderboard = function(rows, mode, chapter, sort) {
+        const cmp = (sort === 'score') ? lbCompareScore : lbCompare;
+        const isReal = (e) => !!e && ((e.score || 0) > 0 || (e.time || 0) > 0);
+        const merged = [];
+        const seen = Object.create(null);
+        for (const r of (rows || [])) {
+            if (!isReal(r)) continue;
+            merged.push(r);
+            if (r.name) seen[r.name] = true;
+        }
+        for (const e of SaveSystem.loadLeaderboard(mode, chapter)) {
+            if (!isReal(e) || (e.name && seen[e.name])) continue;  // онлайн уже содержит это имя
+            merged.push(e);
+            if (e.name) seen[e.name] = true;
+        }
+        merged.sort(cmp);
+        const lb = [];
+        for (let i = 0; i < 10; i++) lb.push(merged[i] || lbEmptyEntry());
+        return lb;
     }
 
 MainScene.prototype._setLbBoard = function(mode, chapter) {

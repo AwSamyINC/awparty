@@ -173,6 +173,10 @@ class MainScene extends Phaser.Scene {
         this._refreshRemoteLeaderboard('normal');
         this._refreshRemoteLeaderboard('hardcore');
 
+        // Авто-апдейтер: открытая вкладка сама перезагрузится на новый деплой, но только
+        // находясь в меню (см. src/updater.js) — чтобы не оборвать забег.
+        if (typeof Updater !== 'undefined') Updater.init(() => this.currentState === GameState.MENU);
+
         if (window.__awHideLoader) window.__awHideLoader();
 
         Analytics.track('session_start', {
@@ -479,6 +483,8 @@ class MainScene extends Phaser.Scene {
             this.audio.setDuck(ducked ? 0.5 : 1);
         }
         if (ns === GameState.LEADERBOARD) this._refreshRemoteLeaderboard(this.lbView, this.lbChapter);
+        // Версия, замеченная во время забега, применяется как только игрок вышел в меню.
+        if (ns === GameState.MENU && typeof Updater !== 'undefined') Updater.maybeApply();
     }
 
     updateCursor() {

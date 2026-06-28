@@ -42,12 +42,13 @@ begin
   v_mode    := case when p_mode = 'hardcore' then 'hardcore' else 'normal' end;
   v_chapter := case when p_chapter between 1 and 3 then p_chapter else 1 end;
 
-  -- rate-limit: не больше 60 токенов на cid за час (забег идёт минуты — с большим запасом).
-  -- Мягкий: cid живёт в localStorage и ротируется; отсекает наивный спам, не упорного читера.
+  -- rate-limit: не больше 200 токенов на cid за час (активные игроки часто рестартят
+  -- через 'R' — низкий порог терял их токен и сабмит). Мягкий: cid живёт в localStorage
+  -- и ротируется; отсекает наивный спам, не упорного читера.
   select count(*) into v_recent
     from public.run_tokens
    where cid = p_cid and issued_at > now() - interval '1 hour';
-  if v_recent >= 60 then raise exception 'rate limit'; end if;
+  if v_recent >= 200 then raise exception 'rate limit'; end if;
 
   insert into public.run_tokens (cid, mode, chapter)
   values (left(coalesce(p_cid, ''), 64), v_mode, v_chapter)

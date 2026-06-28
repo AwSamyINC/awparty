@@ -14,7 +14,7 @@ const ctx = (over) => Object.assign({
 // --- каталог ---
 ok('21 достижение в каталоге', Achievements.DEFS.length === 21);
 let sum = 0; for (const d of Achievements.DEFS) sum += d.coins;
-ok('суммарный payout = 5600', sum === 5600);
+ok('суммарный payout = 83975', sum === 83975);
 
 // --- first_run всегда ---
 const r = Achievements.evaluate(ctx(), []);
@@ -41,7 +41,11 @@ ok('9 ударов → нет', !has(Achievements.evaluate(ctx({ chapter: 1, cle
 ok('8 ударов → да', has(Achievements.evaluate(ctx({ chapter: 1, cleared: true, hits: 8 }), []), 'untouchable'));
 
 // --- монеты конкретной ачивки ---
-ok('ch3_clear даёт 400', Achievements.evaluate(ctx({ chapter: 3, cleared: true }), []).newly.find((u) => u.id === 'ch3_clear').coins === 400);
+ok('ch3_clear даёт 6000', Achievements.evaluate(ctx({ chapter: 3, cleared: true }), []).newly.find((u) => u.id === 'ch3_clear').coins === 6000);
+
+// --- порог rich_run (новый масштаб экономики) ---
+ok('rich_run 3999 → нет', !has(Achievements.evaluate(ctx({ runCoins: 3999 }), []), 'rich_run'));
+ok('rich_run 4000 → да', has(Achievements.evaluate(ctx({ runCoins: 4000 }), []), 'rich_run'));
 
 // --- progressFor ---
 const slayer3 = Achievements.DEFS.find((d) => d.id === 'slayer_3');

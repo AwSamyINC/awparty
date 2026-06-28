@@ -143,14 +143,14 @@
          script.async = false сохраняет порядок выполнения вставленных скриптов. -->
     <script>
         (function () {
-            var ASSET_VER = '236'; // ← единственное место для бампа версии модулей
+            var ASSET_VER = '237'; // ← единственное место для бампа версии модулей
             window.ASSET_VER = ASSET_VER; // авто-апдейтер (src/updater.js) сверяет её со свежим index.html
             // Порядок важен: entities.js объявляет DEG + Player, затем entities_enemy/
             // entities_projectiles/entities_pickups (используют DEG и глобалы) — ВСЕ до spawner
             // (там new Enemy). scene.js объявляет класс MainScene, затем scene_fx/scene_records/
             // scene_ui навешивают методы на его прототип, и только потом main.js создаёт игру.
             var MODULES = [
-                'constants', 'i18n', 'utils', 'save', 'entities', 'entities_enemy', 'entities_projectiles', 'entities_pickups', 'spawner',
+                'constants', 'i18n', 'utils', 'save', 'achievements', 'entities', 'entities_enemy', 'entities_projectiles', 'entities_pickups', 'spawner',
                 'hud', 'shop', 'audio', 'config', 'leaderboard_remote', 'cloud_save', 'analytics',
                 'scene', 'scene_fx', 'scene_combat', 'scene_spawndriver', 'scene_chapter3', 'scene_records', 'scene_ui', 'updater', 'main',
             ];

@@ -24,7 +24,7 @@ module.exports = [
                 t: 'readonly', setLanguage: 'readonly', detectLang: 'readonly',
 
                 distSq: 'readonly', dist: 'readonly', normalize: 'readonly', randInt: 'readonly',
-                rgb: 'readonly', clamp8: 'readonly', clamp: 'readonly', fmtNum: 'readonly',
+                rgb: 'readonly', clamp8: 'readonly', clamp: 'readonly', fmtNum: 'readonly', roundCost: 'readonly',
                 lbCompare: 'readonly', lbCompareScore: 'readonly', lbEmptyEntry: 'readonly', formatTime: 'readonly',
 
                 SaveSystem: 'readonly', Achievements: 'readonly',
@@ -46,8 +46,11 @@ module.exports = [
                 SUPABASE_URL: 'readonly', SUPABASE_ANON_KEY: 'readonly',
 
                 RemoteLeaderboard: 'readonly', CloudSave: 'readonly',
+                Analytics: 'readonly', Updater: 'readonly',
 
                 MainScene: 'readonly',
+
+                module: 'readonly', // dual-export для Node (achievements.js/updater.js)
             },
         },
         rules: {

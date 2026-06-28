@@ -536,40 +536,81 @@ MainScene.prototype._buildStageClear = function() {
 
 MainScene.prototype._achCardRect = function(i) {
         const W = C.VIEW_WIDTH;
-        const cols = 3, cardW = 560, cardH = 96, gapX = 30, gapY = 14;
+        const cols = 3, cardW = 560, cardH = 88, gapX = 30, gapY = 12;
         const totalW = cols * cardW + (cols - 1) * gapX;
-        const x0 = (W - totalW) / 2, y0 = 180;
+        const x0 = (W - totalW) / 2, y0 = 212;
         const cx = i % cols, cy = (i / cols) | 0;
         return { x: x0 + cx * (cardW + gapX), y: y0 + cy * (cardH + gapY), w: cardW, h: cardH };
+    }
+
+MainScene.prototype._setAchSort = function(mode) {
+        if (this.achSort === mode) return;
+        this.achSort = mode;
+        this.audio.play('sfx_menu_click');
+        this.rebuildMenu();
     }
 
 MainScene.prototype._buildAchievements = function() {
         const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT;
         this._mAdd(this.add.rectangle(0, 0, W, H, 0x06001a, 220 / 255).setOrigin(0, 0));
-        this._mText(W / 2, 90, t('ach_title'), 80, '#00e6ff', 0.5, 0.5, '#c800ff', 4);
+        this._mText(W / 2, 80, t('ach_title'), 76, '#00e6ff', 0.5, 0.5, '#c800ff', 4);
 
+        const defs = Achievements.DEFS;
         const meta = t('ach') || {};
+        const titleOf = (def) => (meta[def.id] && meta[def.id].title) || def.id;
         const unlocked = Object.create(null);
+        const idset = Object.create(null);
+        for (const d of defs) idset[d.id] = true;
         for (const id of (this.save.achUnlocked || [])) unlocked[id] = true;
+        let doneCount = 0;
+        for (const id in unlocked) if (idset[id]) doneCount++;
         const stats = { lifetimeKills: this.save.lifetimeKills || 0, lifetimeRuns: this.save.lifetimeRuns || 0 };
 
-        for (let i = 0; i < Achievements.DEFS.length; i++) {
-            const def = Achievements.DEFS[i];
-            const r = this._achCardRect(i);
+        // счётчик выполнения
+        this._mText(W / 2, 142, t('ach_done') + ' ' + doneCount + ' ' + t('ach_of') + ' ' + defs.length, 30, '#ffd700', 0.5, 0.5, '#000', 2);
+
+        // ярлыки сортировки (кликабельные + Tab; активный подсвечен)
+        if (!this.achSort) this.achSort = 'default';
+        const sortIds = ['default', 'name', 'reward'];
+        const sortLabels = [t('ach_sort_default'), t('ach_sort_name'), t('ach_sort_reward')];
+        const chips = [];
+        for (let i = 0; i < sortIds.length; i++) {
+            const active = this.achSort === sortIds[i];
+            chips.push(this._mText(0, 182, sortLabels[i], 24, active ? '#ffffff' : '#7fded0', 0, 0.5, active ? '#ff0096' : '#000', active ? 3 : 2));
+        }
+        const gap = 46;
+        let chipsW = gap * (chips.length - 1);
+        for (const c of chips) chipsW += c.width;
+        let x = W / 2 - chipsW / 2;
+        this._achSortRects = [];
+        for (let i = 0; i < chips.length; i++) {
+            chips[i].setX(x);
+            this._achSortRects.push({ x: x - 10, y: 182 - 22, w: chips[i].width + 20, h: 44, id: sortIds[i] });
+            x += chips[i].width + gap;
+        }
+
+        // порядок карточек по выбранной сортировке
+        const order = defs.map((d, i) => i);
+        if (this.achSort === 'name') order.sort((a, b) => titleOf(defs[a]).localeCompare(titleOf(defs[b])));
+        else if (this.achSort === 'reward') order.sort((a, b) => (defs[b].coins - defs[a].coins) || (a - b));
+
+        for (let k = 0; k < order.length; k++) {
+            const def = defs[order[k]];
+            const r = this._achCardRect(k);
             const done = !!unlocked[def.id];
             const m = meta[def.id] || { title: def.id, desc: '' };
             this._mAdd(this.add.rectangle(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h, done ? 0x103015 : 0x140028, 1)
                 .setOrigin(0.5, 0.5).setStrokeStyle(2, done ? 0x39d353 : 0x4a4060));
             this._mAdd(this.add.circle(r.x + 28, r.y + r.h / 2, 9, done ? 0x39d353 : 0x4a4060));
-            this._mText(r.x + 56, r.y + 24, m.title, 25, done ? '#ffffff' : '#bfb8e0', 0, 0.5, '#000', 2);
-            this._mText(r.x + 56, r.y + 56, m.desc, 18, '#9a93b4', 0, 0.5, '#000', 1);
+            this._mText(r.x + 56, r.y + 22, m.title, 25, done ? '#ffffff' : '#bfb8e0', 0, 0.5, '#000', 2);
+            this._mText(r.x + 56, r.y + 54, m.desc, 18, '#9a93b4', 0, 0.5, '#000', 1);
             const coin = this._mAdd(this.add.sprite(r.x + r.w - 92, r.y + 24, 'coin').setOrigin(0.5, 0.5));
             coin.setDisplaySize(20, 20);
             this._mText(r.x + r.w - 78, r.y + 24, '' + def.coins, 21, '#ffd700', 0, 0.5, '#3a2a00', 2);
             const pr = Achievements.progressFor(def, stats);
             if (pr && !done) {
                 const cur = Math.min(pr.cur, pr.max);
-                this._mText(r.x + r.w - 20, r.y + 64, fmtNum(cur) + ' / ' + fmtNum(pr.max), 19, '#00ffc8', 1, 0.5, '#000', 1);
+                this._mText(r.x + r.w - 20, r.y + 64, fmtNum(cur) + ' / ' + fmtNum(pr.max), 18, '#00ffc8', 1, 0.5, '#000', 1);
             }
         }
 
@@ -799,6 +840,7 @@ MainScene.prototype.onPointerDown = function(p) {
             const bk = this._chapterBackRect;
             if (bk && hit(bk.x, bk.y, bk.w, bk.h)) { this.setState(GameState.LOBBY); return; }
         } else if (st === GameState.ACHIEVEMENTS) {
+            if (this._achSortRects) for (const sr of this._achSortRects) if (hit(sr.x, sr.y, sr.w, sr.h)) { this._setAchSort(sr.id); return; }
             const bk = this._achBackRect;
             if (bk && hit(bk.x, bk.y, bk.w, bk.h)) { this.audio.play('sfx_menu_click'); this.setState(GameState.MENU); return; }
         } else if (st === GameState.STAGE_CLEAR) {
@@ -1100,7 +1142,8 @@ MainScene.prototype.onKeyDown = function(e) {
                 if (cc >= 32 && cc !== 127 && this.cloudInput.length < 20) { this.cloudInput += e.key; this._cloudError = ''; this._cloudMsg = ''; this.rebuildMenu(); }
             }
         } else if (st === GameState.ACHIEVEMENTS) {
-            if (enter || esc) { this.audio.play('sfx_menu_click'); this.setState(GameState.MENU); }
+            if (code === 'Tab') { const o = ['default', 'name', 'reward']; const i = o.indexOf(this.achSort || 'default'); this._setAchSort(o[(i + 1) % o.length]); if (e.preventDefault) e.preventDefault(); }
+            else if (enter || esc) { this.audio.play('sfx_menu_click'); this.setState(GameState.MENU); }
         } else if (st === GameState.STAGE_CLEAR) {
             if (enter || esc) this._stageClearToHub();
         } else if (st === GameState.PLAYING) {

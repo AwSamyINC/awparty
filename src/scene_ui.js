@@ -35,7 +35,7 @@ MainScene.prototype.rebuildMenu = function() {
         const st = this.currentState;
         const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT;
 
-        const showBg = (st === GameState.MENU || st === GameState.SETTINGS || st === GameState.LOBBY || st === GameState.LEADERBOARD || st === GameState.RENAME_INPUT || st === GameState.CLOUD_RESTORE || st === GameState.CHAPTER_SELECT);
+        const showBg = (st === GameState.MENU || st === GameState.SETTINGS || st === GameState.LOBBY || st === GameState.LEADERBOARD || st === GameState.RENAME_INPUT || st === GameState.CLOUD_RESTORE || st === GameState.CHAPTER_SELECT || st === GameState.ACHIEVEMENTS);
         this.menuBg.setVisible(showBg);
         this.lobbyPlayer.setVisible(st === GameState.LOBBY);
         const hudVisible = (st === GameState.PLAYING || st === GameState.PAUSED || st === GameState.LEVEL_UP || st === GameState.ABILITY_SELECT);
@@ -65,6 +65,7 @@ MainScene.prototype.rebuildMenu = function() {
         else if (st === GameState.CLOUD_RESTORE) this._buildCloudRestore();
         else if (st === GameState.STAGE_CLEAR) this._buildStageClear();
         else if (st === GameState.CHAPTER_SELECT) this._buildChapterSelect();
+        else if (st === GameState.ACHIEVEMENTS) this._buildAchievements();
         else if (st === GameState.PLAYING && this.isGameOver) this._buildGameOver();
     }
 
@@ -519,6 +520,51 @@ MainScene.prototype._buildStageClear = function() {
         this._mText(r.x + r.w / 2, r.y + r.h / 2, t('stageclear_hub'), 44, '#ffffff', 0.5, 0.5, '#c800ff', 3);
     }
 
+MainScene.prototype._achCardRect = function(i) {
+        const W = C.VIEW_WIDTH;
+        const cols = 3, cardW = 560, cardH = 96, gapX = 30, gapY = 14;
+        const totalW = cols * cardW + (cols - 1) * gapX;
+        const x0 = (W - totalW) / 2, y0 = 180;
+        const cx = i % cols, cy = (i / cols) | 0;
+        return { x: x0 + cx * (cardW + gapX), y: y0 + cy * (cardH + gapY), w: cardW, h: cardH };
+    }
+
+MainScene.prototype._buildAchievements = function() {
+        const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT;
+        this._mAdd(this.add.rectangle(0, 0, W, H, 0x06001a, 220 / 255).setOrigin(0, 0));
+        this._mText(W / 2, 90, t('ach_title'), 80, '#00e6ff', 0.5, 0.5, '#c800ff', 4);
+
+        const meta = t('ach') || {};
+        const unlocked = Object.create(null);
+        for (const id of (this.save.achUnlocked || [])) unlocked[id] = true;
+        const stats = { lifetimeKills: this.save.lifetimeKills || 0, lifetimeRuns: this.save.lifetimeRuns || 0 };
+
+        for (let i = 0; i < Achievements.DEFS.length; i++) {
+            const def = Achievements.DEFS[i];
+            const r = this._achCardRect(i);
+            const done = !!unlocked[def.id];
+            const m = meta[def.id] || { title: def.id, desc: '' };
+            this._mAdd(this.add.rectangle(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h, done ? 0x103015 : 0x140028, 1)
+                .setOrigin(0.5, 0.5).setStrokeStyle(2, done ? 0x39d353 : 0x4a4060));
+            this._mAdd(this.add.circle(r.x + 28, r.y + r.h / 2, 9, done ? 0x39d353 : 0x4a4060));
+            this._mText(r.x + 56, r.y + 24, m.title, 25, done ? '#ffffff' : '#bfb8e0', 0, 0.5, '#000', 2);
+            this._mText(r.x + 56, r.y + 56, m.desc, 18, '#9a93b4', 0, 0.5, '#000', 1);
+            const coin = this._mAdd(this.add.sprite(r.x + r.w - 92, r.y + 24, 'coin').setOrigin(0.5, 0.5));
+            coin.setDisplaySize(20, 20);
+            this._mText(r.x + r.w - 78, r.y + 24, '' + def.coins, 21, '#ffd700', 0, 0.5, '#3a2a00', 2);
+            const pr = Achievements.progressFor(def, stats);
+            if (pr && !done) {
+                const cur = Math.min(pr.cur, pr.max);
+                this._mText(r.x + r.w - 20, r.y + 64, fmtNum(cur) + ' / ' + fmtNum(pr.max), 19, '#00ffc8', 1, 0.5, '#000', 1);
+            }
+        }
+
+        const bw = 320, bh = 72, bx = W / 2 - bw / 2, by = H - 90;
+        this._achBackRect = { x: bx, y: by, w: bw, h: bh };
+        this._mAdd(this.add.rectangle(bx + bw / 2, by + bh / 2, bw, bh, 0x14003c, 1).setOrigin(0.5, 0.5).setStrokeStyle(3, 0x00e6ff));
+        this._mText(bx + bw / 2, by + bh / 2, t('ach_back'), 34, '#ffffff', 0.5, 0.5, '#c800ff', 3);
+    }
+
 MainScene.prototype._buildNameInput = function() {
         const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT;
         this._mAdd(this.add.rectangle(0, 0, W, H, 0x0a001e, 230 / 255).setOrigin(0, 0));
@@ -738,6 +784,9 @@ MainScene.prototype.onPointerDown = function(p) {
             }
             const bk = this._chapterBackRect;
             if (bk && hit(bk.x, bk.y, bk.w, bk.h)) { this.setState(GameState.LOBBY); return; }
+        } else if (st === GameState.ACHIEVEMENTS) {
+            const bk = this._achBackRect;
+            if (bk && hit(bk.x, bk.y, bk.w, bk.h)) { this.audio.play('sfx_menu_click'); this.setState(GameState.MENU); return; }
         } else if (st === GameState.STAGE_CLEAR) {
             const r = this._stageClearHubRect();
             if (hit(r.x, r.y, r.w, r.h)) this._stageClearToHub();
@@ -1035,6 +1084,8 @@ MainScene.prototype.onKeyDown = function(e) {
                 const cc = e.key.charCodeAt(0);
                 if (cc >= 32 && cc !== 127 && this.cloudInput.length < 20) { this.cloudInput += e.key; this._cloudError = ''; this._cloudMsg = ''; this.rebuildMenu(); }
             }
+        } else if (st === GameState.ACHIEVEMENTS) {
+            if (enter || esc) { this.audio.play('sfx_menu_click'); this.setState(GameState.MENU); }
         } else if (st === GameState.STAGE_CLEAR) {
             if (enter || esc) this._stageClearToHub();
         } else if (st === GameState.PLAYING) {

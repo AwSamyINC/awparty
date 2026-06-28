@@ -88,7 +88,7 @@ MainScene.prototype._buildLobby = function() {
         this._mText(W * 0.7, H * 0.15, t('lobby_hub'), 100, '#00ffc8', 0.5, 0.5, '#ff0096', 4);
         const coin = this._mAdd(this.add.sprite(W * 0.7 - 70, H * 0.27, 'coin').setOrigin(0.5, 0.5));
         coin.setDisplaySize(50, 50);
-        this._mText(W * 0.7 - 30, H * 0.25, '' + this.save.totalCoins, 50, '#ffff00', 0, 0.5);
+        this._mText(W * 0.7 - 30, H * 0.25, fmtNum(this.save.totalCoins), 50, '#ffff00', 0, 0.5);
         const items = [t('lobby_start'), t('lobby_shop'), t('lobby_back')];
         const objs = [];
         for (let i = 0; i < items.length; i++) {
@@ -463,7 +463,7 @@ MainScene.prototype._buildGameOver = function() {
             [t('summary_time'), formatTime(this.survivalTimer)],
             [t('summary_level'), '' + this.player.level],
             [t('summary_kills'), '' + (this.killCount || 0)],
-            [t('summary_coins'), '' + (this.coinsThisRun || 0)],
+            [t('summary_coins'), fmtNum(this.coinsThisRun || 0)],
         ];
         const colW = 340, startX = W / 2 - (cells.length - 1) * colW / 2;
         for (let i = 0; i < cells.length; i++) {
@@ -512,7 +512,7 @@ MainScene.prototype._buildStageClear = function() {
             this._mText(colX[1], y, fmtNum(s.score || 0), 40, '#00e6ff', 0.5, 0.5, '#000', 2);
             this._mText(colX[2], y, formatTime(s.time), 40, '#ffffff', 0.5, 0.5, '#000', 2);
             this._mText(colX[3], y, '' + s.kills, 40, '#ffffff', 0.5, 0.5, '#000', 2);
-            this._mText(colX[4], y, '' + s.coins, 40, '#ffd700', 0.5, 0.5, '#3a2a00', 2);
+            this._mText(colX[4], y, fmtNum(s.coins), 40, '#ffd700', 0.5, 0.5, '#3a2a00', 2);
             y += 56;
         }
         this._mAdd(this.add.rectangle(W / 2, y - 6, 1280, 2, 0x3a3060, 1).setOrigin(0.5, 0.5));
@@ -521,7 +521,7 @@ MainScene.prototype._buildStageClear = function() {
         this._mText(colX[1], y, fmtNum(tot.score), 42, '#00e6ff', 0.5, 0.5, '#000', 2);
         this._mText(colX[2], y, formatTime(tot.time), 42, '#ffffff', 0.5, 0.5, '#000', 2);
         this._mText(colX[3], y, '' + tot.kills, 42, '#ffffff', 0.5, 0.5, '#000', 2);
-        this._mText(colX[4], y, '' + tot.coins, 42, '#ffd700', 0.5, 0.5, '#3a2a00', 2);
+        this._mText(colX[4], y, fmtNum(tot.coins), 42, '#ffd700', 0.5, 0.5, '#3a2a00', 2);
 
         // Компактные ряды билда: экран клира плотнее экрана смерти (сверху таблица из
         // 3 этапов), поэтому ужимаем иконки, чтобы билд + баннер достижений влезли над
@@ -1121,7 +1121,7 @@ MainScene.prototype.onKeyDown = function(e) {
             if (cheatsOn && e.key && e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
                 this.cheatBuffer = (this.cheatBuffer + e.key.toLowerCase()).slice(-32);
                 if (this.cheatBuffer.indexOf('givecoinz') !== -1) {
-                    this.save.totalCoins += 500; this.cheatMessage = t('cheat_gave'); this.cheatMessageTimer = 3;
+                    this.save.totalCoins += 50000; this.cheatMessage = t('cheat_gave'); this.cheatMessageTimer = 3;
                     this.saveGame(); this.cheatBuffer = ''; this.rebuildMenu();
                 }
             }

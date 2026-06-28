@@ -161,7 +161,7 @@ class HUD {
         }
     }
 
-    update(player, totalCoins, bossExists, bossHpPct, timerStr, runPickCounts,
+    update(player, coins, bossExists, bossHpPct, timerStr, runPickCounts,
             equippedAbilities, abilityCooldowns, abilityMaxCooldowns) {
         const W = this.uiW, H = this.uiH;
         this._lastBossExists = bossExists;
@@ -181,9 +181,9 @@ class HUD {
             this.hpText.setText(t('hud_hp') + ' ' + hpShown + ' / ' + player.maxHp);
         }
 
-        if (this._lastCoins !== totalCoins) {
-            this._lastCoins = totalCoins;
-            this.coinText.setText('' + totalCoins);
+        if (this._lastCoins !== coins) {
+            this._lastCoins = coins;
+            this.coinText.setText(fmtNum(coins));
         }
 
         if (this._lastTimer !== timerStr) {

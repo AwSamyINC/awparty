@@ -52,19 +52,14 @@ class Shop {
         return [9, 5, 1, 7, 3, 2, 5, 5, 3][b * 3 + r];
     }
     nodeCost(b, r) {
+        const idx = b * 3 + r;
+        const def = C.SHOP_NODE_COST[idx];
+        if (!def) return 9999;
+        // Дэш (idx 7): nodeCurLevel начинается с 1 (дэш есть со старта), поэтому
+        // экспонента считается от (cur-1) — первая покупка стоит base.
         const cur = this.nodeCurLevel(b, r);
-        switch (b * 3 + r) {
-            case 0: return 80 + cur * 20;
-            case 1: return 180;
-            case 2: return 250;
-            case 3: return 80 + cur * 10;
-            case 4: return 350;
-            case 5: return 280;
-            case 6: return 80;
-            case 7: return 120 + this.s.permDashLevel * 60;
-            case 8: return 120;
-            default: return 9999;
-        }
+        const lvl = (idx === 7) ? cur - 1 : cur;
+        return roundCost(def.base * Math.pow(def.growth, lvl));
     }
     nodeUnlockReq(b, r) {
         switch (b * 3 + r) {
@@ -236,7 +231,7 @@ class Shop {
     }
 
     _coinPill(rightX, cy, coins) {
-        const txt = '' + coins;
+        const txt = fmtNum(coins);
         const w = 56 + txt.length * 17, h = 46, x = rightX - w, y = cy - h / 2;
         this._panel(x, y, w, h, h / 2, 0x241636, 1, 0xffd24a, 2);
         const coin = this._add(this.scene.add.sprite(x + 26, cy, 'coin').setOrigin(0.5, 0.5));
@@ -332,7 +327,7 @@ class Shop {
                 const coinX = icon ? tx + 10 : nr.x + SHOP_CARD_W / 2 - 16;
                 const coin = this._add(this.scene.add.sprite(coinX, nr.y + nr.h - 20, 'coin').setOrigin(0.5, 0.5));
                 coin.setDisplaySize(20, 20);
-                this._text(coinX + 14, nr.y + nr.h - 20, '' + cost, 21, afford ? '#ffe24a' : '#d2643c', 0, 0.5);
+                this._text(coinX + 14, nr.y + nr.h - 20, fmtNum(cost), 21, afford ? '#ffe24a' : '#d2643c', 0, 0.5);
             }
         }
     }
@@ -388,7 +383,7 @@ class Shop {
                 const coinX = icon ? tx + 10 : ar.x + ACARD_W / 2 - 18;
                 const coin = this._add(this.scene.add.sprite(coinX, ar.y + 140, 'coin').setOrigin(0.5, 0.5));
                 coin.setDisplaySize(22, 22);
-                this._text(coinX + 16, ar.y + 140, '' + ARTIFACTS[i].cost, 22, afford ? '#ffe24a' : '#d2643c', 0, 0.5);
+                this._text(coinX + 16, ar.y + 140, fmtNum(ARTIFACTS[i].cost), 22, afford ? '#ffe24a' : '#d2643c', 0, 0.5);
             }
         }
     }

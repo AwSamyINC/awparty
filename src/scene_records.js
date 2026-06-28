@@ -1,8 +1,38 @@
 
 MainScene.prototype._runMode = function() { return this.save.isHardcoreMode ? 'hardcore' : 'normal'; }
 
+// Оценка достижений — ОДИН раз на завершённый забег (смерть или клир через портал).
+// Обновляет пожизненные счётчики, начисляет монеты за новые ачивки, запоминает
+// разблокированное за забег в this.unlockedThisRun (показ на сводке).
+MainScene.prototype._gradeAchievements = function() {
+        if (this._achGraded) return;
+        this._achGraded = true;
+        const s = this.save;
+        if (!Array.isArray(s.achUnlocked)) s.achUnlocked = [];
+        s.lifetimeKills = (s.lifetimeKills || 0) + (this.killCount || 0);
+        s.lifetimeRuns = (s.lifetimeRuns || 0) + 1;
+        const ctx = {
+            chapter: this.currentChapter,
+            cleared: !!this.crazyMode,            // финальный босс главы убит → crazyMode
+            runKills: this.killCount || 0,
+            runScore: this.runScore || 0,
+            runTime: this.survivalTimer || 0,
+            runCoins: this.coinsThisRun || 0,
+            hits: this.hitsThisRun || 0,
+            hardcore: !!s.isHardcoreMode,
+            lifetimeKills: s.lifetimeKills,
+            lifetimeRuns: s.lifetimeRuns,
+        };
+        const res = Achievements.evaluate(ctx, s.achUnlocked);
+        for (const u of res.newly) s.achUnlocked.push(u.id);
+        s.totalCoins += res.coins;
+        this.unlockedThisRun = res.newly;
+        this.saveGame();
+    }
+
 MainScene.prototype.onPlayerDeath = function() {
         this.isGameOver = true;
+        this._gradeAchievements();
         Analytics.track('run_end', {
             chapter: this.currentChapter, mode: this._runMode(), outcome: 'death',
             phase: this.gamePhase, kills: this.killCount,
@@ -21,6 +51,7 @@ MainScene.prototype.onPlayerDeath = function() {
     }
 
 MainScene.prototype._submitChapterResult = function(name) {
+        this._gradeAchievements();
         const mode = this._runMode(), chapter = this.currentChapter;
         Analytics.track('run_end', {
             chapter: chapter, mode: mode, outcome: 'clear',

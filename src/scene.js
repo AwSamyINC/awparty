@@ -395,6 +395,7 @@ class MainScene extends Phaser.Scene {
         p.level = 1; p.currentXP = 0; p.xpToNextLevel = C.XP_BASE; p.shootCooldown = 0.45;
         this.regenTimer = 0; this.shotsFired = 0;
         this.killCount = 0; this.coinsThisRun = 0; this.runScore = 0;
+        this.hitsThisRun = 0; this.unlockedThisRun = []; this._achGraded = false;
         p.sprite.setPosition(this.arenaW / 2, this.arenaH / 2);
         p.isInvincible = false; p.invincibilityTimer = 0;
         p.bladeMail = false; p.pierce = false;
@@ -878,7 +879,7 @@ class MainScene extends Phaser.Scene {
         if (p.damageReduction > 0) amount = Math.max(1, Math.round(amount * (1 - p.damageReduction)));
         const oldHp = p.hp;
         p.takeDamage(amount);
-        if (p.hp < oldHp) { this.triggerShake(shakeDur, shakeMag); this.audio.play('sfx_player_hurt'); }
+        if (p.hp < oldHp) { this.hitsThisRun = (this.hitsThisRun || 0) + 1; this.triggerShake(shakeDur, shakeMag); this.audio.play('sfx_player_hurt'); }
         if (p.hp <= 0 && !this.isGameOver) this.onPlayerDeath();
     }
 

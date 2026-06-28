@@ -439,6 +439,17 @@ MainScene.prototype._buildPause = function() {
         this._listItems = { objs, labels: items, selSize: 70, baseSize: 55 };
     }
 
+MainScene.prototype._buildUnlockBanner = function(cx, y) {
+        const list = this.unlockedThisRun || [];
+        if (!list.length) return y;
+        const meta = t('ach') || {};
+        let total = 0; const names = [];
+        for (const u of list) { total += u.coins; const m = meta[u.id]; names.push(m ? m.title : u.id); }
+        this._mText(cx, y, t('ach_unlocked_run') + '  +' + total, 30, '#ffd700', 0.5, 0.5, '#3a2a00', 3);
+        this._mText(cx, y + 36, names.join('   •   '), 24, '#00ffc8', 0.5, 0.5, '#000', 2);
+        return y + 76;
+    }
+
 MainScene.prototype._buildGameOver = function() {
         const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT;
         this._mAdd(this.add.rectangle(0, 0, W, H, 0x1e000a, 225 / 255).setOrigin(0, 0));
@@ -464,6 +475,7 @@ MainScene.prototype._buildGameOver = function() {
         by = this._buildIconRow(t('build_abilities'), W / 2, by, this._runAbilities());
         by = this._buildIconRow(t('build_artifacts'), W / 2, by, this._runArtifacts());
 
+        this._buildUnlockBanner(W / 2, by + 16);
         this._mText(W / 2, H - 150, t('gameover_hint'), 36, '#dcd7eb', 0.5, 0.5, '#000', 2);
         this._mText(W / 2, H - 95, t('gameover_records'), 30, '#00ffc8', 0.5, 0.5);
     }
@@ -513,6 +525,8 @@ MainScene.prototype._buildStageClear = function() {
         by = this._buildIconRow(t('build_cards'), W / 2, by, this._runCards());
         by = this._buildIconRow(t('build_abilities'), W / 2, by, this._runAbilities());
         by = this._buildIconRow(t('build_artifacts'), W / 2, by, this._runArtifacts());
+
+        this._buildUnlockBanner(W / 2, H - 250);
 
         const r = this._stageClearHubRect();
         this._mAdd(this.add.rectangle(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h, 0x14003c, 1)

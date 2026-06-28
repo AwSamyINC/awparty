@@ -72,7 +72,7 @@ MainScene.prototype.rebuildMenu = function() {
 MainScene.prototype._buildMenuScreen = function() {
         const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT;
         this._mText(W / 2, H * 0.15, 'AwParty', 150, '#00ffc8', 0.5, 0.5, '#ffffff', 2);
-        const items = [t('menu_play'), t('menu_records'), t('menu_settings')];
+        const items = [t('menu_play'), t('menu_records'), t('menu_achievements'), t('menu_settings')];
         const objs = [];
         for (let i = 0; i < items.length; i++) {
             const sel = i === this.selectedMenuIndex;
@@ -697,7 +697,7 @@ MainScene.prototype.onPointerMove = function(p) {
 
         if (st === GameState.MENU) {
             let ns = -1;
-            for (let i = 0; i < 3; i++) if (hit(W / 2 - 200, H * 0.45 + i * 110 - 40, 400, 80)) ns = i;
+            for (let i = 0; i < 4; i++) if (hit(W / 2 - 200, H * 0.45 + i * 110 - 40, 400, 80)) ns = i;
             if (ns !== -1 && ns !== this.selectedMenuIndex) { this.selectedMenuIndex = ns; this._restyleList(ns); }
         } else if (st === GameState.SETTINGS) {
             let ns = -1;
@@ -755,7 +755,7 @@ MainScene.prototype.onPointerDown = function(p) {
         const W = C.VIEW_WIDTH, H = C.VIEW_HEIGHT;
 
         if (st === GameState.MENU) {
-            for (let i = 0; i < 3; i++) if (hit(W / 2 - 200, H * 0.45 + i * 110 - 40, 400, 80)) { this.selectedMenuIndex = i; this._menuActivate(); return; }
+            for (let i = 0; i < 4; i++) if (hit(W / 2 - 200, H * 0.45 + i * 110 - 40, 400, 80)) { this.selectedMenuIndex = i; this._menuActivate(); return; }
         } else if (st === GameState.LEADERBOARD) {
             const ca = this._lbChapterArrows, nch = CHAPTERS.length;
             if (ca && hit(ca.left.x, ca.left.y, ca.left.w, ca.left.h)) { this._setLbBoard(this.lbView, ((this.lbChapter - 2 + nch) % nch) + 1); return; }
@@ -832,7 +832,8 @@ MainScene.prototype._menuActivate = function() {
         const i = this.selectedMenuIndex;
         if (i === 0) this.setState(GameState.LOBBY);
         else if (i === 1) { this.leaderboardFromMenu = true; this.leaderboardNewEntryIndex = -1; this._pendingHighlight = null; this.lbView = 'normal'; this.lbChapter = 1; this.setState(GameState.LEADERBOARD); }
-        else if (i === 2) this.setState(GameState.SETTINGS);
+        else if (i === 2) this.setState(GameState.ACHIEVEMENTS);
+        else if (i === 3) this.setState(GameState.SETTINGS);
     }
 MainScene.prototype._lobbyActivate = function() {
         this.audio.play('sfx_menu_click');
@@ -1011,8 +1012,8 @@ MainScene.prototype.onKeyDown = function(e) {
         const pauseKey = (code === 'KeyP' || code === 'Escape');
 
         if (st === GameState.MENU) {
-            if (up) { this.selectedMenuIndex = (this.selectedMenuIndex + 2) % 3; this._restyleList(this.selectedMenuIndex); }
-            if (down) { this.selectedMenuIndex = (this.selectedMenuIndex + 1) % 3; this._restyleList(this.selectedMenuIndex); }
+            if (up) { this.selectedMenuIndex = (this.selectedMenuIndex + 3) % 4; this._restyleList(this.selectedMenuIndex); }
+            if (down) { this.selectedMenuIndex = (this.selectedMenuIndex + 1) % 4; this._restyleList(this.selectedMenuIndex); }
             if (enter) this._menuActivate();
         } else if (st === GameState.LOBBY) {
             if (up) { this.selectedLobbyIndex = (this.selectedLobbyIndex + 2) % 3; this._restyleList(this.selectedLobbyIndex); }

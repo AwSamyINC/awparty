@@ -168,7 +168,22 @@ const C = {
     MAX_PERM_SPEED_LEVEL: 5,
     MAX_PERM_DASH_LEVEL: 5,
 
+    COIN_VALUE: 30,        // базовая ценность одной подобранной монеты (до множителя главы)
     HARDCORE_COIN_MULT: 1.5,
+
+    // Экспоненциальная кривая цен узлов магазина. Индекс = branch*3 + row (как в shop.js).
+    // cost(level) = roundCost(base * growth^level). Дэш (idx 7) считает от (level-1).
+    SHOP_NODE_COST: [
+        { base: 1500, growth: 1.6 },   // 0 урон         (max 9)
+        { base: 3000, growth: 1.7 },   // 1 крит         (max 5)
+        { base: 40000, growth: 1 },    // 2 мультивыстрел (разовый)
+        { base: 1200, growth: 1.55 },  // 3 макс HP      (max 7)
+        { base: 4000, growth: 1.8 },   // 4 реген        (max 3)
+        { base: 6000, growth: 1.9 },   // 5 броня        (max 2)
+        { base: 1000, growth: 1.6 },   // 6 скорость     (max 5)
+        { base: 2500, growth: 1.7 },   // 7 дэш          (ур.2-5)
+        { base: 1500, growth: 1.6 },   // 8 магнит       (max 3)
+    ],
 
     SCORE: {
         NORMAL: 10,
@@ -225,19 +240,19 @@ const CHAPTERS = [
       floorKey: 'floor', floorTint: null, floorMode: 'tile',
       enemyKey: 'enemy', goblinKey: 'enemyV',
       boss1Key: 'enemy', boss2Key: 'boss2', boss3Key: 'boss3',
-      hpMult: 1, dmgMult: 1, spawnMult: 1, bossHpMult: 1 },
+      hpMult: 1, dmgMult: 1, spawnMult: 1, bossHpMult: 1, coinMult: 1 },
     { id: 2, hue: 0xc800ff,
       floorKey: 'floor2', floorTint: 0x9a6cff, floorMode: 'stretch',
       enemyKey: 'enemy2', goblinKey: 'enemyV2', subwooferKey: 'enemy2_sub', mosherKey: 'enemy2_mosher', hypemanKey: 'enemy2_hype',
       boss1Key: 'c2_boss1', boss2Key: 'c2_boss2', boss3Key: 'c2_boss3', boss1Type: 'DOCTOR', boss2Type: 'BASS', boss3Type: 'SPLIT', encircleEvent: true,
-      hpMult: 1.6, dmgMult: 1.35, spawnMult: 1.2, bossHpMult: 1.8 },
+      hpMult: 1.6, dmgMult: 1.35, spawnMult: 1.2, bossHpMult: 1.8, coinMult: 4 },
     { id: 3, hue: 0xff5050,
       floorKey: 'floor3', floorTint: 0xff6464, floorMode: 'stretch',
       enemyKey: 'enemy', goblinKey: 'enemyV',
       boss1Key: 'enemy', boss2Key: 'boss2', boss3Key: 'boss3',
       cardBosses: ['boss3', 'c2_boss1', 'c2_boss2'], // карточка-гаунтлет: центр + слева/справа
       arenaW: 4000, arenaH: 4000, custom: 'CH3', encircleEvent: true,
-      hpMult: 2.4, dmgMult: 1.8, spawnMult: 1.4, bossHpMult: 2.6 },
+      hpMult: 2.4, dmgMult: 1.8, spawnMult: 1.4, bossHpMult: 2.6, coinMult: 8 },
 ];
 function getChapter(id) { return CHAPTERS.find(c => c.id === id) || CHAPTERS[0]; }
 
@@ -326,13 +341,13 @@ const ABILITY_COOLDOWNS = { 0: 25, 1: 15, 2: 12, 3: 14, 4: 16, 5: 14, 6: 15 };
 const ABILITY_ICONS = { '-10': 'ability_dash', 0: 'ability_invincible', 1: 'ability_slam', 2: 'ability_disc', 3: 'ability_laser', 4: 'ability_skull', 5: 'ability_sonic', 6: 'ability_shatter' };
 
 const ARTIFACTS = [
-    { name: 'BLOOD PACT', desc: 'Kill heals 2 HP', cost: 800 },
-    { name: 'GLASS CANNON', desc: '+30% dmg, Max HP -20', cost: 1000 },
-    { name: 'ECHO CHAMBER', desc: 'Bullets ricochet off walls', cost: 1100 },
-    { name: 'SOUL LEECH', desc: '+0.5% crit/kill  (max +5%)', cost: 1400 },
-    { name: 'BERSERKER', desc: 'HP<=40%: dmg x1.5, no dash slow', cost: 1500 },
-    { name: 'IRON SKIN', desc: 'First 3 hits/run blocked', cost: 1700 },
-    { name: 'MAGNET CORE', desc: 'Infinite pickup range', cost: 5000 },
+    { name: 'BLOOD PACT', desc: 'Kill heals 2 HP', cost: 8000 },
+    { name: 'GLASS CANNON', desc: '+30% dmg, Max HP -20', cost: 10000 },
+    { name: 'ECHO CHAMBER', desc: 'Bullets ricochet off walls', cost: 12000 },
+    { name: 'SOUL LEECH', desc: '+0.5% crit/kill  (max +5%)', cost: 16000 },
+    { name: 'BERSERKER', desc: 'HP<=40%: dmg x1.5, no dash slow', cost: 18000 },
+    { name: 'IRON SKIN', desc: 'First 3 hits/run blocked', cost: 22000 },
+    { name: 'MAGNET CORE', desc: 'Infinite pickup range', cost: 60000 },
 ];
 
 const ARTIFACT = {

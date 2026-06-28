@@ -29,6 +29,7 @@ const SaveSystem = {
             achUnlocked: [],
             lifetimeKills: 0,
             lifetimeRuns: 0,
+            economyVersion: 1,
         };
     },
 
@@ -39,7 +40,15 @@ const SaveSystem = {
         if (!raw) return d;
         let b;
         try { b = JSON.parse(raw); } catch (e) { return d; }
+        b = this._migrate(b);
         return Object.assign(d, this._validate(b));
+    },
+
+    // Одноразовый вайп монет при переходе на новую экономику (тысячи вместо сотен).
+    // Сейвы без economyVersion обнуляют монеты; апгрейды/артефакты/главы остаются.
+    _migrate(b) {
+        if (!(b.economyVersion >= 1)) { b.totalCoins = 0; b.economyVersion = 1; }
+        return b;
     },
 
     _validate(b) {
@@ -80,6 +89,7 @@ const SaveSystem = {
         b.achUnlocked = b.achUnlocked.filter((x, i) => b.achUnlocked.indexOf(x) === i); // дедуп
         b.lifetimeKills = Math.floor(numClamp(b.lifetimeKills, 0, 1e12, 0));
         b.lifetimeRuns = Math.floor(numClamp(b.lifetimeRuns, 0, 1e9, 0));
+        b.economyVersion = Math.floor(numClamp(b.economyVersion, 1, 9, 1));
         return b;
     },
 
@@ -107,6 +117,7 @@ const SaveSystem = {
             achUnlocked: data.achUnlocked,
             lifetimeKills: data.lifetimeKills,
             lifetimeRuns: data.lifetimeRuns,
+            economyVersion: data.economyVersion,
         };
         try { localStorage.setItem(SAVE_KEY, JSON.stringify(blob)); } catch (e) {}
     },
@@ -133,7 +144,7 @@ const SaveSystem = {
         'totalCoins', 'permMaxHp', 'permDamage', 'permSpeed', 'permDashLevel',
         'permCritChance', 'permRegen', 'permArmor', 'permMagnet', 'permMultishot',
         'permArtifacts', 'permActiveArtifacts', 'maxChapterUnlocked',
-        'achUnlocked', 'lifetimeKills', 'lifetimeRuns',
+        'achUnlocked', 'lifetimeKills', 'lifetimeRuns', 'economyVersion',
     ],
 
     cloudBlob(data) {
@@ -144,6 +155,9 @@ const SaveSystem = {
 
     applyCloudMeta(data, blob) {
         if (!blob || typeof blob !== 'object') return false;
+        // Облачный бэкап до новой экономики: его монеты в старом масштабе — обнуляем,
+        // чтобы восстановление не вернуло старые монеты.
+        if (!(blob.economyVersion >= 1)) { blob = Object.assign({}, blob); blob.totalCoins = 0; blob.economyVersion = 1; }
         // Локальные значения ачивок/счётчиков — для слияния (не перезаписи).
         const localAch = Array.isArray(data.achUnlocked) ? data.achUnlocked.slice() : [];
         const localKills = Number.isFinite(data.lifetimeKills) ? data.lifetimeKills : 0;

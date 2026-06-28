@@ -27,7 +27,7 @@ module.exports = [
                 rgb: 'readonly', clamp8: 'readonly', clamp: 'readonly', fmtNum: 'readonly',
                 lbCompare: 'readonly', lbCompareScore: 'readonly', lbEmptyEntry: 'readonly', formatTime: 'readonly',
 
-                SaveSystem: 'readonly',
+                SaveSystem: 'readonly', Achievements: 'readonly',
 
                 Player: 'readonly', Enemy: 'readonly', Bullet: 'readonly',
                 EnemyProjectile: 'readonly', BossSoul: 'readonly', Gem: 'readonly',

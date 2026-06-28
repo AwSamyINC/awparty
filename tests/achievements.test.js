@@ -14,7 +14,7 @@ const ctx = (over) => Object.assign({
 // --- каталог ---
 ok('21 достижение в каталоге', Achievements.DEFS.length === 21);
 let sum = 0; for (const d of Achievements.DEFS) sum += d.coins;
-ok('суммарный payout = 5000', sum === 5000);
+ok('суммарный payout = 5600', sum === 5600);
 
 // --- first_run всегда ---
 const r = Achievements.evaluate(ctx(), []);

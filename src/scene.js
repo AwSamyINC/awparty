@@ -308,6 +308,11 @@ class MainScene extends Phaser.Scene {
         return p.length ? p.pop().reinit(x, y) : new Coin(this, x, y);
     }
     spawnVinyl(x, y) {
+        // Винил не притягивается магнитом и его нужно коснуться вплотную. Держим его
+        // в досягаемой зоне (см. C.VINYL_SPAWN_MARGIN) — иначе у стены/в углу не подобрать.
+        const m = C.VINYL_SPAWN_MARGIN;
+        x = clamp(x, m, this.arenaW - m);
+        y = clamp(y, m, this.arenaH - m);
         const p = this.pools.vinyl;
         return p.length ? p.pop().reinit(x, y) : new Vinyl(this, x, y);
     }

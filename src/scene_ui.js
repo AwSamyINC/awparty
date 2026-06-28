@@ -571,8 +571,8 @@ MainScene.prototype._buildAchievements = function() {
 
         // ярлыки сортировки (кликабельные + Tab; активный подсвечен)
         if (!this.achSort) this.achSort = 'default';
-        const sortIds = ['default', 'name', 'reward'];
-        const sortLabels = [t('ach_sort_default'), t('ach_sort_name'), t('ach_sort_reward')];
+        const sortIds = ['default', 'name'];
+        const sortLabels = [t('ach_sort_default'), t('ach_sort_name')];
         const chips = [];
         for (let i = 0; i < sortIds.length; i++) {
             const active = this.achSort === sortIds[i];
@@ -592,7 +592,14 @@ MainScene.prototype._buildAchievements = function() {
         // порядок карточек по выбранной сортировке
         const order = defs.map((d, i) => i);
         if (this.achSort === 'name') order.sort((a, b) => titleOf(defs[a]).localeCompare(titleOf(defs[b])));
-        else if (this.achSort === 'reward') order.sort((a, b) => (defs[b].coins - defs[a].coins) || (a - b));
+        else order.sort((a, b) => {
+            // дефолт: обычные ачивки по награде малая -> большая; тир-ладдер (Истребитель/
+            // Ветеран, kind:'life') не трогаем - единым блоком в конце, в порядке каталога I -> VI.
+            const la = defs[a].kind === 'life', lb = defs[b].kind === 'life';
+            if (la !== lb) return la ? 1 : -1;
+            if (la) return a - b;
+            return (defs[a].coins - defs[b].coins) || (a - b);
+        });
 
         for (let k = 0; k < order.length; k++) {
             const def = defs[order[k]];
@@ -1142,7 +1149,7 @@ MainScene.prototype.onKeyDown = function(e) {
                 if (cc >= 32 && cc !== 127 && this.cloudInput.length < 20) { this.cloudInput += e.key; this._cloudError = ''; this._cloudMsg = ''; this.rebuildMenu(); }
             }
         } else if (st === GameState.ACHIEVEMENTS) {
-            if (code === 'Tab') { const o = ['default', 'name', 'reward']; const i = o.indexOf(this.achSort || 'default'); this._setAchSort(o[(i + 1) % o.length]); if (e.preventDefault) e.preventDefault(); }
+            if (code === 'Tab') { const o = ['default', 'name']; const i = o.indexOf(this.achSort || 'default'); this._setAchSort(o[(i + 1) % o.length]); if (e.preventDefault) e.preventDefault(); }
             else if (enter || esc) { this.audio.play('sfx_menu_click'); this.setState(GameState.MENU); }
         } else if (st === GameState.STAGE_CLEAR) {
             if (enter || esc) this._stageClearToHub();

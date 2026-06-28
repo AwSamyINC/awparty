@@ -13,7 +13,6 @@ const I18N = {
         ach_of: 'of',
         ach_sort_default: 'Default',
         ach_sort_name: 'By name',
-        ach_sort_reward: 'By reward',
         ach: {
             first_run:      { title: 'First Steps',        desc: 'Finish your first run' },
             rich_run:       { title: 'Coin Hoarder',       desc: 'Collect 120 coins in one run' },
@@ -257,7 +256,6 @@ const I18N = {
         ach_of: 'из',
         ach_sort_default: 'По порядку',
         ach_sort_name: 'По названию',
-        ach_sort_reward: 'По награде',
         ach: {
             first_run:      { title: 'Первые шаги',      desc: 'Заверши первый забег' },
             rich_run:       { title: 'Скопидом',         desc: 'Собери 120 монет за забег' },
